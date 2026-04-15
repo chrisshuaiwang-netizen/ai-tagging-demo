@@ -148,6 +148,14 @@
   .placeholder-tag { display: inline-flex; align-items: center; padding: 3px 8px; background: #f0f0ff; color: #667eea; border-radius: 4px; font-size: 11px; font-family: monospace; cursor: pointer; border: 1px solid #c7d2fe; }
   .placeholder-tag:hover { background: #e0e7ff; }
 
+  /* Test modal */
+  .test-upload-zone { border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.15s; color: #9ca3af; font-size: 13px; position: relative; overflow: hidden; }
+  .test-upload-zone:hover, .test-upload-zone.drag-over { border-color: #667eea; background: #f5f3ff; color: #667eea; }
+  .test-upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .test-preview-img { width: 100%; max-height: 180px; object-fit: contain; border-radius: 6px; display: none; margin-top: 10px; }
+  .test-result-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; max-height: 220px; overflow-y: auto; font-size: 11px; font-family: 'Menlo','Monaco','Consolas',monospace; line-height: 1.7; color: #374151; white-space: pre-wrap; word-break: break-all; }
+  .test-status-line { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+
   /* Schema editor */
   .schema-section { background: #fff; border-radius: 10px; border: 1px solid #eaecf0; overflow: hidden; }
   .schema-section-header { padding: 14px 20px; border-bottom: 1px solid #eaecf0; display: flex; align-items: center; justify-content: space-between; background: #f9fafb; }
@@ -990,36 +998,46 @@
 </div>
 
 <!-- Test Modal -->
-<div class="modal-overlay" id="testModal">
-  <div class="modal" style="width:560px;">
+<div class="modal-overlay" id="testModal" onclick="if(event.target===this)document.getElementById('testModal').classList.remove('show')">
+  <div class="modal" style="width:600px;">
     <div class="modal-header">
-      <div class="modal-title">🧪 效果测试</div>
+      <div class="modal-title">效果测试</div>
       <button class="modal-close" onclick="document.getElementById('testModal').classList.remove('show')">×</button>
     </div>
-    <div class="modal-body">
-      <div class="form-group">
-        <div class="form-label">测试图片 URL</div>
-        <input class="form-input" placeholder="粘贴图片 URL，或上传本地文件">
+    <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;">
+
+      <!-- API Key -->
+      <div class="form-group" style="margin:0;">
+        <div class="form-label" style="display:flex;align-items:center;justify-content:space-between;">
+          API Key
+          <span style="font-size:11px;color:#9ca3af;font-weight:400;">仅本地使用，不会上传</span>
+        </div>
+        <input class="form-input" id="testApiKey" type="password" placeholder="粘贴火山引擎 Bearer Token">
       </div>
-      <div style="border:2px dashed #e5e7eb;border-radius:8px;padding:32px;text-align:center;cursor:pointer;color:#9ca3af;font-size:13px;margin-bottom:16px;" onclick="showToast('请选择图片文件')">
-        📁 点击或拖拽上传图片（JPG/PNG/WEBP）
+
+      <!-- File upload -->
+      <div class="form-group" style="margin:0;">
+        <div class="form-label">测试图片</div>
+        <div class="test-upload-zone" id="testUploadZone">
+          <input type="file" accept="image/*" id="testFileInput" onchange="handleTestFile(this)">
+          <div id="testUploadHint">📁 点击或拖拽上传图片（JPG / PNG / WEBP）</div>
+          <img id="testPreviewImg" class="test-preview-img">
+        </div>
       </div>
-      <div style="background:#f9fafb;border-radius:8px;padding:16px;border:1px solid #e5e7eb;">
-        <div style="font-size:12px;color:#6b7280;margin-bottom:10px;font-weight:600;">AI 输出预览</div>
-        <pre style="font-size:11px;color:#374151;line-height:1.6;overflow-x:auto;">{
-  "tags": [
-    {"category": "车型", "value": "全新探岳L", "confidence": 0.92},
-    {"category": "商品亮点", "value": "外观", "confidence": 0.88},
-    {"category": "内容来源", "value": "官方发布", "confidence": 0.95}
-  ],
-  "suggested_name": "探岳L_外观_官方发布_20260330",
-  "reasoning": "图片显示全新探岳L车型（加长版），前脸外观展示，品牌官方拍摄风格"
-}</pre>
+
+      <!-- Output -->
+      <div class="form-group" style="margin:0;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div class="form-label" style="margin:0;">AI 输出</div>
+          <div class="test-status-line" id="testStatusLine" style="display:none;"></div>
+        </div>
+        <div class="test-result-box" id="testResultBox">等待运行…</div>
       </div>
+
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="document.getElementById('testModal').classList.remove('show')">关闭</button>
-      <button class="btn btn-primary" onclick="showToast('正在调用豆包 API...');setTimeout(()=>showToast('✓ 测试完成，结果已刷新'),1500)">▶ 运行测试</button>
+      <button class="btn btn-primary" id="testRunBtn" onclick="runRealTest()">▶ 运行测试</button>
     </div>
   </div>
 </div>
@@ -1357,6 +1375,104 @@ function selectTenant(el, id) {
     showToast(names[id] + ' 暂未配置 Prompt，请先联系管理员');
   } else {
     showToast('已切换至 ' + names[id]);
+  }
+}
+
+// ─── Real API Test ───
+let _testImageBase64 = null;
+let _testImageMime = 'image/jpeg';
+
+function handleTestFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  _testImageMime = file.type || 'image/jpeg';
+  const reader = new FileReader();
+  reader.onload = e => {
+    _testImageBase64 = e.target.result.split(',')[1];
+    const img = document.getElementById('testPreviewImg');
+    img.src = e.target.result;
+    img.style.display = 'block';
+    document.getElementById('testUploadHint').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function getCurrentSchemaJson() {
+  const blocks = document.querySelectorAll('.category-block');
+  const cats = [];
+  blocks.forEach(block => {
+    const cat = block.dataset.cat;
+    const tags = [...block.querySelectorAll('.schema-tag')].map(t => ({
+      value: t.dataset.name,
+      ...(t.dataset.def ? { definition: t.dataset.def } : {})
+    }));
+    if (cat && tags.length) cats.push({ name: cat, tags });
+  });
+  return JSON.stringify({ categories: cats }, null, 2);
+}
+
+async function runRealTest() {
+  const apiKey = document.getElementById('testApiKey').value.trim();
+  if (!apiKey) { showToast('请先填写 API Key'); return; }
+  if (!_testImageBase64) { showToast('请先选择测试图片'); return; }
+
+  const btn = document.getElementById('testRunBtn');
+  const resultBox = document.getElementById('testResultBox');
+  const statusLine = document.getElementById('testStatusLine');
+
+  btn.disabled = true;
+  btn.textContent = '分析中…';
+  resultBox.textContent = '正在调用豆包 API…';
+  statusLine.style.display = 'flex';
+  statusLine.innerHTML = '<span style="color:#f59e0b;">⏳ 识别中…</span>';
+
+  // Build prompt: inject schema
+  let prompt = document.getElementById('promptEditor').value;
+  prompt = prompt
+    .replace('{{schema_json}}', getCurrentSchemaJson())
+    .replace(/\{\{tenant_name\}\}/g, '一汽大众')
+    .replace(/\{\{today_date\}\}/g, new Date().toISOString().slice(0,10).replace(/-/g,''))
+    .replace(/\{\{file_type\}\}/g, 'image');
+
+  const payload = {
+    model: 'doubao-seed-2-0-mini-260215',
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: prompt },
+        { type: 'image_url', image_url: { url: `data:${_testImageMime};base64,${_testImageBase64}` } }
+      ]
+    }]
+  };
+
+  try {
+    const t0 = Date.now();
+    const resp = await fetch('https://ark.cn-beijing.volces.com/api/v3/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify(payload)
+    });
+    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      resultBox.textContent = JSON.stringify(data, null, 2);
+      statusLine.innerHTML = `<span style="color:#ef4444;">✕ 请求失败 ${resp.status}</span>`;
+    } else {
+      const content = data.choices?.[0]?.message?.content || '';
+      const tokens = data.usage?.total_tokens ?? '?';
+      try {
+        const m = content.match(/\{[\s\S]*\}/);
+        resultBox.textContent = m ? JSON.stringify(JSON.parse(m[0]), null, 2) : content;
+      } catch { resultBox.textContent = content; }
+      statusLine.innerHTML = `<span style="color:#10b981;">✓ 完成</span><span style="color:#9ca3af;">· ${elapsed}s · ${tokens} tokens</span>`;
+    }
+  } catch (err) {
+    resultBox.textContent = `错误：${err.message}\n\n提示：如遇 CORS 错误，请在本地直接用浏览器打开 HTML 文件（file://）进行测试。`;
+    statusLine.innerHTML = '<span style="color:#ef4444;">✕ 网络错误</span>';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '▶ 运行测试';
   }
 }
 
