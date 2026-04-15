@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 打标系统 · Demo 导航</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f5f6fa;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+}
+.header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 8px;
+}
+.header p {
+  font-size: 14px;
+  color: #6b7280;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  width: 100%;
+  max-width: 900px;
+}
+.card {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  padding: 24px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 16px rgba(102,126,234,0.12);
+  transform: translateY(-2px);
+}
+.card-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  width: fit-content;
+}
+.tag-pc { background: #eff6ff; color: #1d4ed8; }
+.tag-mobile { background: #f0fdf4; color: #15803d; }
+.tag-admin { background: #fef3c7; color: #92400e; }
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111;
+}
+.card-desc {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+.footer {
+  margin-top: 48px;
+  font-size: 12px;
+  color: #9ca3af;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>AI 打标系统 · Demo</h1>
+  <p>一汽大众内容中台 AI 智能打标功能交互演示</p>
+</div>
+
+<div class="grid">
+  <a class="card" href="demo_prompt_admin.html">
+    <span class="card-tag tag-admin">管理后台</span>
+    <div class="card-title">AI Prompt 后台管理</div>
+    <div class="card-desc">多租户 Prompt 配置、Schema 标签管理、版本历史对比</div>
+  </a>
+
+  <a class="card" href="demo_file_detail_ai_tags.html">
+    <span class="card-tag tag-pc">PC · 详情页</span>
+    <div class="card-title">文件详情页 — AI 标签 Tab</div>
+    <div class="card-desc">分类标签展示、添加 / 删除标签、添加分类、重新分析</div>
+  </a>
+
+  <a class="card" href="demo_file_list_ai_tags.html">
+    <span class="card-tag tag-pc">PC · 列表页</span>
+    <div class="card-title">文件列表页 — AI 标签筛选</div>
+    <div class="card-desc">多分类多标签筛选、已选条件展示、完全符合模式</div>
+  </a>
+
+  <a class="card" href="demo_upload_ai_tags.html">
+    <span class="card-tag tag-pc">PC · 上传页</span>
+    <div class="card-title">上传文件页 — AI 标签展示</div>
+    <div class="card-desc">上传时实时 AI 识别，hover 查看标签详情</div>
+  </a>
+
+  <a class="card" href="demo_mobile_list.html">
+    <span class="card-tag tag-mobile">移动端 · 列表页</span>
+    <div class="card-title">移动端文件列表 — AI 标签筛选</div>
+    <div class="card-desc">底部弹层 + 全屏分类标签多选交互</div>
+  </a>
+
+  <a class="card" href="demo_mobile_detail.html">
+    <span class="card-tag tag-mobile">移动端 · 详情页</span>
+    <div class="card-title">移动端文件详情 — AI 标签展示</div>
+    <div class="card-desc">基础信息 / AI 标签 Tab 切换，仅支持查看</div>
+  </a>
+</div>
+
+<div class="footer">AI 打标系统 PRD v2.5 · 仅供内部演示</div>
+
+</body>
+</html>

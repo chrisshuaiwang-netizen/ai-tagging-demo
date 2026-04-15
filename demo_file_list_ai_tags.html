@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>素材管理 - 文件列表</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; font-size: 13px; color: #1a1a2e; background: #f0f2f5; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ─── Top Nav ─── */
+.top-nav { height: 48px; background: #1a2035; display: flex; align-items: center; flex-shrink: 0; padding: 0 16px; gap: 0; z-index: 100; }
+.nav-logo { display: flex; align-items: center; gap: 8px; color: #fff; font-size: 15px; font-weight: 600; margin-right: 32px; }
+.nav-logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+.nav-links { display: flex; align-items: center; flex: 1; gap: 2px; }
+.nav-link { padding: 6px 14px; color: rgba(255,255,255,0.65); font-size: 13px; cursor: pointer; border-radius: 6px; transition: all 0.15s; white-space: nowrap; }
+.nav-link:hover { color: #fff; background: rgba(255,255,255,0.08); }
+.nav-link.active { color: #fff; background: rgba(255,255,255,0.12); }
+.nav-right { display: flex; align-items: center; gap: 10px; }
+.nav-search { display: flex; align-items: center; background: rgba(255,255,255,0.1); border-radius: 20px; padding: 5px 12px; gap: 6px; color: rgba(255,255,255,0.5); font-size: 12px; cursor: pointer; transition: all 0.15s; }
+.nav-search:hover { background: rgba(255,255,255,0.15); }
+.nav-avatar { width: 28px; height: 28px; background: linear-gradient(135deg, #f59e0b, #ef4444); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; }
+
+/* ─── Body layout ─── */
+.body-wrap { display: flex; flex: 1; overflow: hidden; }
+
+/* ─── Left Sidebar ─── */
+.sidebar { width: 200px; flex-shrink: 0; background: #fff; border-right: 1px solid #eaecf0; display: flex; flex-direction: column; overflow: hidden; }
+.sidebar-header { padding: 12px 14px 8px; }
+.sidebar-title { font-size: 11px; font-weight: 600; color: #9ca3af; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+.sidebar-search { display: flex; align-items: center; gap: 6px; background: #f3f4f6; border-radius: 6px; padding: 6px 10px; color: #9ca3af; font-size: 12px; cursor: text; }
+.sidebar-tree { flex: 1; overflow-y: auto; padding: 4px 6px 12px; }
+.tree-item { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 6px; cursor: pointer; transition: all 0.12s; color: #374151; font-size: 13px; }
+.tree-item:hover { background: #f3f4f6; }
+.tree-item.active { background: #ede9fe; color: #6d28d9; }
+.tree-item .icon { font-size: 14px; flex-shrink: 0; width: 16px; }
+.tree-item .label { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree-item .count { font-size: 11px; color: #9ca3af; }
+.tree-item.active .count { color: #a78bfa; }
+.tree-sub { margin-left: 14px; border-left: 1px solid #f3f4f6; padding-left: 6px; }
+.tree-indent-1 { padding-left: 22px; }
+.sidebar-section-label { font-size: 11px; color: #9ca3af; font-weight: 600; padding: 8px 8px 4px; letter-spacing: 0.04em; }
+
+/* ─── Content ─── */
+.content { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+/* ─── Content Header ─── */
+.content-header { background: #fff; border-bottom: 1px solid #eaecf0; padding: 0 16px; flex-shrink: 0; }
+.content-tabs { display: flex; align-items: center; gap: 0; border-bottom: 1px solid #eaecf0; }
+.ctab { padding: 12px 16px; font-size: 13px; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; font-weight: 500; }
+.ctab.active { color: #667eea; border-bottom-color: #667eea; }
+.ctab:hover:not(.active) { color: #374151; }
+.ctab .badge { display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; height: 16px; background: #f3f4f6; color: #6b7280; border-radius: 8px; font-size: 10px; margin-left: 4px; }
+.ctab.active .badge { background: #ede9fe; color: #7c3aed; }
+
+/* ─── Filter Bar ─── */
+.filter-bar { display: flex; align-items: center; gap: 6px; padding: 10px 0; flex-wrap: wrap; }
+.filter-pill { display: flex; align-items: center; gap: 4px; padding: 5px 10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 20px; font-size: 12px; color: #374151; cursor: pointer; transition: all 0.15s; white-space: nowrap; user-select: none; position: relative; }
+.filter-pill:hover { border-color: #667eea; color: #667eea; }
+.filter-pill.active { background: #ede9fe; border-color: #a78bfa; color: #6d28d9; }
+.filter-pill .arrow { font-size: 9px; color: #9ca3af; transition: transform 0.2s; }
+.filter-pill.open .arrow { transform: rotate(180deg); }
+.filter-pill.ai-filter { background: #fff; }
+.filter-pill.ai-filter.active { background: #ede9fe; border-color: #a78bfa; color: #6d28d9; }
+.filter-pill.ai-filter.has-selection { background: #ede9fe; border-color: #a78bfa; color: #6d28d9; }
+.filter-divider { width: 1px; height: 20px; background: #e5e7eb; margin: 0 2px; }
+.filter-bar-right { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.sort-btn { display: flex; align-items: center; gap: 4px; padding: 5px 10px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; color: #374151; cursor: pointer; transition: all 0.15s; }
+.sort-btn:hover { border-color: #667eea; color: #667eea; }
+.layout-btns { display: flex; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+.layout-btn { padding: 5px 8px; background: #fff; border: none; cursor: pointer; font-size: 13px; color: #9ca3af; transition: all 0.15s; }
+.layout-btn.active { background: #667eea; color: #fff; }
+.btn-new { display: flex; align-items: center; gap: 4px; padding: 5px 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; color: #374151; cursor: pointer; transition: all 0.15s; }
+.btn-new:hover { border-color: #667eea; color: #667eea; }
+.btn-upload { display: flex; align-items: center; gap: 4px; padding: 5px 14px; background: #667eea; border: none; border-radius: 6px; font-size: 12px; color: #fff; cursor: pointer; font-weight: 500; transition: all 0.15s; }
+.btn-upload:hover { background: #5a6fd8; }
+
+/* Active tag summary strip */
+.active-filter-strip { display: none; align-items: center; gap: 6px; padding: 6px 0 8px; flex-wrap: wrap; }
+.active-filter-strip.show { display: flex; }
+.strip-label { font-size: 11px; color: #9ca3af; white-space: nowrap; }
+.strip-tag { display: flex; align-items: center; gap: 4px; padding: 3px 8px; background: #ede9fe; border-radius: 12px; font-size: 11px; color: #6d28d9; cursor: pointer; }
+.strip-tag:hover { background: #ddd6fe; }
+.strip-tag .remove { color: #a78bfa; font-size: 12px; line-height: 1; }
+.strip-clear { font-size: 11px; color: #ef4444; cursor: pointer; padding: 2px 6px; border-radius: 10px; }
+.strip-clear:hover { background: #fee2e2; }
+
+/* ─── AI Tag Dropdown ─── */
+.ai-dropdown-wrap { position: relative; }
+.ai-dropdown { display: none; position: absolute; top: calc(100% + 6px); left: 0; width: 240px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.10); z-index: 200; overflow: hidden; }
+.ai-dropdown.show { display: block; }
+.ai-dropdown-header { padding: 10px 12px 8px; border-bottom: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; }
+.ai-dropdown-title { font-size: 12px; font-weight: 600; color: #374151; }
+.ai-dropdown-clear { font-size: 11px; color: #9ca3af; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+.ai-dropdown-clear:hover { color: #ef4444; background: #fee2e2; }
+.ai-dropdown-body { max-height: 400px; overflow-y: auto; padding: 4px 0 6px; }
+.ai-cat-block { margin-bottom: 2px; }
+.ai-cat-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px 3px; cursor: pointer; }
+.ai-cat-name { font-size: 11px; font-weight: 600; color: #9ca3af; letter-spacing: 0.04em; text-transform: uppercase; }
+.ai-cat-toggle { font-size: 9px; color: #c4c9d4; transition: transform 0.15s; }
+.ai-cat-toggle.open { transform: rotate(90deg); }
+.ai-check-list { padding: 0 0 4px; }
+.ai-check-list.collapsed { display: none; }
+.ai-check-row { display: flex; align-items: center; gap: 8px; padding: 5px 12px; cursor: pointer; transition: background 0.1s; }
+.ai-check-row:hover { background: #f9fafb; }
+.ai-check-row.selected { background: #f5f3ff; }
+.ai-checkbox { width: 14px; height: 14px; border: 1.5px solid #d1d5db; border-radius: 3px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.12s; background: #fff; }
+.ai-check-row.selected .ai-checkbox { background: #667eea; border-color: #667eea; }
+.ai-checkbox-tick { width: 8px; height: 8px; display: none; }
+.ai-check-row.selected .ai-checkbox-tick { display: block; }
+.ai-check-label { font-size: 12px; color: #374151; flex: 1; }
+.ai-check-row.selected .ai-check-label { color: #5b21b6; font-weight: 500; }
+
+/* ─── Main grid area ─── */
+.main-area { flex: 1; overflow-y: auto; padding: 0 16px 16px; }
+
+/* Breadcrumb + meta row */
+.meta-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0 6px; }
+.breadcrumb { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #9ca3af; }
+.breadcrumb .sep { color: #d1d5db; }
+.breadcrumb .crumb { cursor: pointer; }
+.breadcrumb .crumb:hover { color: #667eea; }
+.breadcrumb .crumb.current { color: #374151; cursor: default; }
+.meta-count { font-size: 12px; color: #9ca3af; }
+.meta-count strong { color: #374151; }
+
+/* File grid */
+.file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.file-card { background: #fff; border-radius: 8px; overflow: hidden; cursor: pointer; transition: all 0.15s; border: 1.5px solid transparent; }
+.file-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); border-color: #e5e7eb; }
+.file-card.selected { border-color: #667eea; }
+.file-thumb { width: 100%; aspect-ratio: 4/3; overflow: hidden; position: relative; background: #f3f4f6; }
+.file-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.file-thumb .thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+.file-card-body { padding: 7px 8px; }
+.file-card-name { font-size: 11px; color: #374151; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+.file-card-meta { font-size: 10px; color: #9ca3af; display: flex; align-items: center; justify-content: space-between; }
+.file-ai-tags { display: flex; flex-wrap: wrap; gap: 2px; padding: 0 8px 7px; }
+.file-ai-tag { font-size: 10px; padding: 1px 5px; background: #ede9fe; color: #7c3aed; border-radius: 8px; white-space: nowrap; }
+.file-ai-tag.manual { background: #f0fdf4; color: #16a34a; }
+
+/* Empty/filtered state */
+.empty-state { display: none; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; color: #9ca3af; gap: 12px; }
+.empty-state.show { display: flex; }
+.empty-state .icon { font-size: 40px; }
+.empty-state p { font-size: 13px; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+
+/* Overlay for dropdown close */
+.overlay { position: fixed; inset: 0; z-index: 150; display: none; }
+.overlay.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Top Nav -->
+<div class="top-nav">
+  <div class="nav-logo">
+    <div class="nav-logo-icon">云</div>
+    <span>云设计</span>
+  </div>
+  <div class="nav-links">
+    <div class="nav-link active">素材管理</div>
+    <div class="nav-link">内容管理</div>
+    <div class="nav-link">内容审核</div>
+    <div class="nav-link">营销管理</div>
+    <div class="nav-link">数据看板</div>
+  </div>
+  <div class="nav-right">
+    <div class="nav-search">
+      <span>🔍</span>
+      <span>搜索素材、标签…</span>
+    </div>
+    <div class="nav-avatar">王</div>
+  </div>
+</div>
+
+<!-- Body -->
+<div class="body-wrap">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">全部文件夹</div>
+      <div class="sidebar-search">🔍 搜索文件夹</div>
+    </div>
+    <div class="sidebar-tree">
+      <div class="tree-item active" onclick="selectFolder(this, '全部文件')">
+        <span class="icon">📁</span><span class="label">全部文件</span><span class="count">2,341</span>
+      </div>
+      <div class="sidebar-section-label">车型素材</div>
+      <div class="tree-item" onclick="selectFolder(this, '迈腾系列')">
+        <span class="icon">🚗</span><span class="label">迈腾系列</span><span class="count">312</span>
+      </div>
+      <div class="tree-item" onclick="selectFolder(this, '探岳系列')">
+        <span class="icon">🚗</span><span class="label">探岳系列</span><span class="count">427</span>
+      </div>
+      <div class="tree-item" onclick="selectFolder(this, 'ID 系列')">
+        <span class="icon">⚡</span><span class="label">ID 系列</span><span class="count">198</span>
+      </div>
+      <div class="tree-item" onclick="selectFolder(this, '高尔夫系列')">
+        <span class="icon">🚗</span><span class="label">高尔夫系列</span><span class="count">156</span>
+      </div>
+      <div class="tree-item" onclick="selectFolder(this, 'CC 系列')">
+        <span class="icon">🚗</span><span class="label">CC 系列</span><span class="count">88</span>
+      </div>
+      <div class="sidebar-section-label">内容类型</div>
+      <div class="tree-item" onclick="selectFolder(this, '官方物料')">
+        <span class="icon">🏢</span><span class="label">官方物料</span><span class="count">634</span>
+      </div>
+      <div class="tree-item" onclick="selectFolder(this, 'KOE 内容')">
+        <span class="icon">👤</span><span class="label">KOE 内容</span><span class="count">289</span>
+      </div>
+      <div class="tree-item" onclick="selectFolder(this, '媒体测评')">
+        <span class="icon">📺</span><span class="label">媒体测评</span><span class="count">176</span>
+      </div>
+      <div class="tree-item" onclick="selectFolder(this, 'UGC 素材')">
+        <span class="icon">🙋</span><span class="label">UGC 素材</span><span class="count">243</span>
+      </div>
+      <div class="sidebar-section-label">场景</div>
+      <div class="tree-item" onclick="selectFolder(this, '车展活动')">
+        <span class="icon">🎪</span><span class="label">车展活动</span><span class="count">118</span>
+      </div>
+      <div class="tree-item" onclick="selectFolder(this, '驾乘体验')">
+        <span class="icon">🛣️</span><span class="label">驾乘体验</span><span class="count">94</span>
+      </div>
+      <div class="tree-item" onclick="selectFolder(this, '回收站')">
+        <span class="icon">🗑️</span><span class="label">回收站</span><span class="count">12</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+    <div class="content-header">
+      <!-- Content Tabs -->
+      <div class="content-tabs">
+        <div class="ctab active">全部 <span class="badge">2,341</span></div>
+        <div class="ctab">图片 <span class="badge">1,847</span></div>
+        <div class="ctab">视频 <span class="badge">398</span></div>
+        <div class="ctab">文档 <span class="badge">96</span></div>
+        <div class="ctab">AI 未处理 <span class="badge">47</span></div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <!-- Existing filters -->
+        <div class="filter-pill" onclick="togglePill(this)">格式 <span class="arrow">▾</span></div>
+        <div class="filter-pill" onclick="togglePill(this)">文件类型 <span class="arrow">▾</span></div>
+        <div class="filter-pill" onclick="togglePill(this)">上传方式 <span class="arrow">▾</span></div>
+        <div class="filter-pill" onclick="togglePill(this)">上传时间 <span class="arrow">▾</span></div>
+
+        <!-- AI Tag Filter -->
+        <div class="ai-dropdown-wrap" id="aiDropdownWrap">
+          <div class="filter-pill ai-filter" id="aiFilterBtn" onclick="toggleAiDropdown(event)">
+            🤖 AI 标签 <span class="arrow" id="aiArrow">▾</span>
+          </div>
+          <!-- Dropdown -->
+          <div class="ai-dropdown" id="aiDropdown">
+            <div class="ai-dropdown-header">
+              <div class="ai-dropdown-title">🤖 AI 标签筛选</div>
+              <div class="ai-dropdown-clear" id="dropdownClearBtn" onclick="clearAllTags()" style="display:none;">清除全部</div>
+            </div>
+            <div class="ai-dropdown-body" id="aiDropdownBody">
+
+              <!-- 车型 -->
+              <div class="ai-cat-block">
+                <div class="ai-cat-head" onclick="toggleCat(this)">
+                  <span class="ai-cat-name">车型</span>
+                  <span class="ai-cat-toggle open">▶</span>
+                </div>
+                <div class="ai-check-list" data-cat="车型">
+                  <div class="ai-check-row" onclick="selectTag(this,'车型','全新探岳L')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">全新探岳L</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'车型','迈腾B9')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">迈腾B9</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'车型','迈腾B8')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">迈腾B8</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'车型','ID.7 VIZZION')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">ID.7 VIZZION</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'车型','ID.4 CROZZ')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">ID.4 CROZZ</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'车型','高尔夫GTI')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">高尔夫GTI</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'车型','CC')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">CC</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'车型','全新速腾L')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">全新速腾L</span></div>
+                </div>
+              </div>
+
+              <!-- 商品亮点 -->
+              <div class="ai-cat-block">
+                <div class="ai-cat-head" onclick="toggleCat(this)">
+                  <span class="ai-cat-name">商品亮点</span>
+                  <span class="ai-cat-toggle open">▶</span>
+                </div>
+                <div class="ai-check-list" data-cat="商品亮点">
+                  <div class="ai-check-row" onclick="selectTag(this,'商品亮点','外观')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">外观</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'商品亮点','内饰')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">内饰</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'商品亮点','动力')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">动力</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'商品亮点','智驾')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">智驾</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'商品亮点','空间')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">空间</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'商品亮点','操控')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">操控</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'商品亮点','舒适')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">舒适</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'商品亮点','安全')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">安全</span></div>
+                </div>
+              </div>
+
+              <!-- 种草内容 -->
+              <div class="ai-cat-block">
+                <div class="ai-cat-head" onclick="toggleCat(this)">
+                  <span class="ai-cat-name">种草内容</span>
+                  <span class="ai-cat-toggle open">▶</span>
+                </div>
+                <div class="ai-check-list" data-cat="种草内容">
+                  <div class="ai-check-row" onclick="selectTag(this,'种草内容','讲车')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">讲车</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'种草内容','生活')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">生活</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'种草内容','旅游')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">旅游</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'种草内容','家庭')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">家庭</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'种草内容','驾乘感受')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">驾乘感受</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'种草内容','通勤')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">通勤</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'种草内容','户外露营')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">户外露营</span></div>
+                </div>
+              </div>
+
+              <!-- 内容来源 -->
+              <div class="ai-cat-block">
+                <div class="ai-cat-head" onclick="toggleCat(this)">
+                  <span class="ai-cat-name">内容来源</span>
+                  <span class="ai-cat-toggle open">▶</span>
+                </div>
+                <div class="ai-check-list" data-cat="内容来源">
+                  <div class="ai-check-row" onclick="selectTag(this,'内容来源','官方发布')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">官方发布</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'内容来源','KOE')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">KOE</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'内容来源','UGC')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">UGC</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'内容来源','媒体测评')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">媒体测评</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'内容来源','经销商')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">经销商</span></div>
+                </div>
+              </div>
+
+              <!-- 政策活动 -->
+              <div class="ai-cat-block">
+                <div class="ai-cat-head" onclick="toggleCat(this)">
+                  <span class="ai-cat-name">政策活动</span>
+                  <span class="ai-cat-toggle">▶</span>
+                </div>
+                <div class="ai-check-list collapsed" data-cat="政策活动">
+                  <div class="ai-check-row" onclick="selectTag(this,'政策活动','购车政策')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">购车政策</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'政策活动','老客户政策')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">老客户政策</span></div>
+                </div>
+              </div>
+
+              <!-- 服务 -->
+              <div class="ai-cat-block">
+                <div class="ai-cat-head" onclick="toggleCat(this)">
+                  <span class="ai-cat-name">服务</span>
+                  <span class="ai-cat-toggle">▶</span>
+                </div>
+                <div class="ai-check-list collapsed" data-cat="服务">
+                  <div class="ai-check-row" onclick="selectTag(this,'服务','用车技巧')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">用车技巧</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'服务','养车常识')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">养车常识</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'服务','客户关怀')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">客户关怀</span></div>
+                  <div class="ai-check-row" onclick="selectTag(this,'服务','服务转化')"><span class="ai-checkbox"><svg class="ai-checkbox-tick" viewBox="0 0 8 8" fill="none"><polyline points="1,4 3,6 7,2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="ai-check-label">服务转化</span></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-pill" onclick="togglePill(this)">更多筛选 <span class="arrow">▾</span></div>
+
+        <div class="filter-divider"></div>
+
+        <div class="filter-bar-right">
+          <div class="sort-btn">按时间倒序 ▾</div>
+          <div class="layout-btns">
+            <button class="layout-btn active" title="网格视图">⊞</button>
+            <button class="layout-btn" title="列表视图">≡</button>
+          </div>
+          <div class="btn-new">＋ 新建文件夹</div>
+          <button class="btn-upload">↑ 上传</button>
+        </div>
+      </div>
+
+      <!-- Active filter strip -->
+      <div class="active-filter-strip" id="activeFilterStrip">
+        <span class="strip-label">AI 标签：</span>
+        <div id="activeTagList" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+        <span class="strip-clear" onclick="clearAllTags()">✕ 清除</span>
+      </div>
+    </div>
+
+    <!-- Main Grid Area -->
+    <div class="main-area">
+      <div class="meta-row">
+        <div class="breadcrumb">
+          <span class="crumb">素材管理</span>
+          <span class="sep">›</span>
+          <span class="crumb current" id="currentFolder">全部文件</span>
+        </div>
+        <div class="meta-count">共 <strong id="fileCount">2,341</strong> 个文件</div>
+      </div>
+
+      <div class="file-grid" id="fileGrid"></div>
+      <div class="empty-state" id="emptyState">
+        <div class="icon">🔍</div>
+        <p>没有符合筛选条件的文件</p>
+        <div style="font-size:12px;color:#9ca3af;">尝试调整 AI 标签筛选条件</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay to close dropdown -->
+<div class="overlay" id="overlay" onclick="closeAiDropdown()"></div>
+
+<script>
+// ─── Mock file data ───
+const MOCK_FILES = [
+  { id:1, name:'全新探岳L_外观_官方发布_20260325', type:'jpg', size:'2.4MB', date:'2026-03-25', tags:[{cat:'车型',val:'全新探岳L'},{cat:'商品亮点',val:'外观'},{cat:'内容来源',val:'官方发布'}], color:'#e8f4fd', icon:'🚗' },
+  { id:2, name:'迈腾B9_贯穿尾灯_外观_20260324', type:'jpg', size:'3.1MB', date:'2026-03-24', tags:[{cat:'车型',val:'迈腾B9'},{cat:'商品亮点',val:'外观'},{cat:'内容来源',val:'官方发布'}], color:'#e8f5e9', icon:'🚗' },
+  { id:3, name:'探岳L_驾乘感受_KOE_20260323', type:'mp4', size:'48MB', date:'2026-03-23', tags:[{cat:'车型',val:'全新探岳L'},{cat:'种草内容',val:'驾乘感受'},{cat:'内容来源',val:'KOE'}], color:'#fff3e0', icon:'🎬' },
+  { id:4, name:'ID7_内饰_展厅_官方_20260322', type:'jpg', size:'1.8MB', date:'2026-03-22', tags:[{cat:'车型',val:'ID.7 VIZZION'},{cat:'商品亮点',val:'内饰'},{cat:'内容来源',val:'官方发布'}], color:'#f3e5f5', icon:'⚡' },
+  { id:5, name:'高尔夫GTI_动感外观_20260321', type:'jpg', size:'2.2MB', date:'2026-03-21', tags:[{cat:'车型',val:'高尔夫GTI'},{cat:'商品亮点',val:'外观'},{cat:'种草内容',val:'讲车'}], color:'#fce4ec', icon:'🏎️' },
+  { id:6, name:'探岳_家庭出行_UGC_20260320', type:'jpg', size:'1.5MB', date:'2026-03-20', tags:[{cat:'车型',val:'全新探岳L'},{cat:'种草内容',val:'家庭'},{cat:'内容来源',val:'UGC'}], color:'#e8f5e9', icon:'🚗' },
+  { id:7, name:'迈腾B9_智驾演示_媒体_20260319', type:'mp4', size:'86MB', date:'2026-03-19', tags:[{cat:'车型',val:'迈腾B9'},{cat:'商品亮点',val:'智驾'},{cat:'内容来源',val:'媒体测评'}], color:'#e3f2fd', icon:'🎬' },
+  { id:8, name:'CC猎装_旅游公路_20260318', type:'jpg', size:'3.4MB', date:'2026-03-18', tags:[{cat:'车型',val:'CC'},{cat:'种草内容',val:'旅游'},{cat:'内容来源',val:'KOE'}], color:'#f9fbe7', icon:'🚗' },
+  { id:9, name:'速腾L_通勤_经销商_20260317', type:'jpg', size:'1.2MB', date:'2026-03-17', tags:[{cat:'车型',val:'全新速腾L'},{cat:'种草内容',val:'通勤'},{cat:'内容来源',val:'经销商'}], color:'#fff8e1', icon:'🚗' },
+  { id:10, name:'ID4_户外露营_UGC_20260316', type:'jpg', size:'2.8MB', date:'2026-03-16', tags:[{cat:'车型',val:'ID.4 CROZZ'},{cat:'种草内容',val:'户外露营'},{cat:'内容来源',val:'UGC'}], color:'#e8f5e9', icon:'⚡' },
+  { id:11, name:'探岳L_空间展示_官方_20260315', type:'jpg', size:'2.1MB', date:'2026-03-15', tags:[{cat:'车型',val:'全新探岳L'},{cat:'商品亮点',val:'空间'},{cat:'内容来源',val:'官方发布'}], color:'#e8f4fd', icon:'🚗' },
+  { id:12, name:'迈腾B9_购车政策_海报_20260314', type:'png', size:'1.6MB', date:'2026-03-14', tags:[{cat:'车型',val:'迈腾B9'},{cat:'政策活动',val:'购车政策'},{cat:'内容来源',val:'经销商'}], color:'#fce4ec', icon:'🖼️' },
+  { id:13, name:'全品牌_车展_官方发布_20260313', type:'jpg', size:'4.2MB', date:'2026-03-13', tags:[{cat:'车型',val:'全新探岳L'},{cat:'商品亮点',val:'外观'},{cat:'内容来源',val:'官方发布'}], color:'#f3e5f5', icon:'🚗' },
+  { id:14, name:'ID7_操控感受_讲车_20260312', type:'mp4', size:'102MB', date:'2026-03-12', tags:[{cat:'车型',val:'ID.7 VIZZION'},{cat:'商品亮点',val:'操控'},{cat:'种草内容',val:'讲车'}], color:'#e8f4fd', icon:'🎬' },
+  { id:15, name:'探岳_安全测评_媒体_20260311', type:'jpg', size:'2.7MB', date:'2026-03-11', tags:[{cat:'车型',val:'全新探岳L'},{cat:'商品亮点',val:'安全'},{cat:'内容来源',val:'媒体测评'}], color:'#e3f2fd', icon:'🚗' },
+  { id:16, name:'CC_轿跑外观_生活场景_20260310', type:'jpg', size:'3.0MB', date:'2026-03-10', tags:[{cat:'车型',val:'CC'},{cat:'商品亮点',val:'外观'},{cat:'种草内容',val:'生活'}], color:'#fff3e0', icon:'🚗' },
+  { id:17, name:'探岳L_老客户政策_20260309', type:'png', size:'1.1MB', date:'2026-03-09', tags:[{cat:'车型',val:'全新探岳L'},{cat:'政策活动',val:'老客户政策'},{cat:'内容来源',val:'经销商'}], color:'#fce4ec', icon:'🖼️' },
+  { id:18, name:'迈腾B9_舒适座椅_内饰_20260308', type:'jpg', size:'2.3MB', date:'2026-03-08', tags:[{cat:'车型',val:'迈腾B9'},{cat:'商品亮点',val:'舒适'},{cat:'商品亮点',val:'内饰'}], color:'#e8f5e9', icon:'🚗' },
+];
+
+// ─── State ───
+let selectedTags = {}; // { "车型": ["全新探岳L"], "商品亮点": ["外观","内饰"] }
+let appliedTags = {};  // committed filter
+let currentFolder = '全部文件';
+
+// ─── Init ───
+renderGrid(MOCK_FILES);
+
+function renderGrid(files) {
+  const grid = document.getElementById('fileGrid');
+  const empty = document.getElementById('emptyState');
+  document.getElementById('fileCount').textContent = files.length.toLocaleString();
+
+  if (files.length === 0) {
+    grid.style.display = 'none';
+    empty.classList.add('show');
+    return;
+  }
+  grid.style.display = 'grid';
+  empty.classList.remove('show');
+
+  grid.innerHTML = files.map(f => {
+    const aiTagsHtml = f.tags.slice(0,2).map(t =>
+      `<span class="file-ai-tag">${t.val}</span>`
+    ).join('');
+    return `
+      <div class="file-card" onclick="openFile(${f.id})">
+        <div class="file-thumb" style="background:${f.color};">
+          <div class="thumb-placeholder">${f.icon}</div>
+        </div>
+        <div class="file-card-body">
+          <div class="file-card-name" title="${f.name}">${f.name}</div>
+          <div class="file-card-meta"><span>${f.type.toUpperCase()}</span><span>${f.size}</span></div>
+        </div>
+        <div class="file-ai-tags">${aiTagsHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+// ─── Folder select ───
+function selectFolder(el, name) {
+  document.querySelectorAll('.tree-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  currentFolder = name;
+  document.getElementById('currentFolder').textContent = name;
+  applyFilter();
+}
+
+// ─── Filter pill toggle (non-AI) ───
+function togglePill(el) {
+  el.classList.toggle('active');
+}
+
+// ─── AI dropdown ───
+function toggleAiDropdown(e) {
+  e.stopPropagation();
+  const dd = document.getElementById('aiDropdown');
+  const overlay = document.getElementById('overlay');
+  const btn = document.getElementById('aiFilterBtn');
+  const isOpen = dd.classList.contains('show');
+  if (isOpen) {
+    closeAiDropdown();
+  } else {
+    dd.classList.add('show');
+    overlay.classList.add('show');
+    btn.classList.add('open');
+    // Sync checkboxes to current selected state
+    syncDropdownState();
+  }
+}
+
+function closeAiDropdown() {
+  document.getElementById('aiDropdown').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('aiFilterBtn').classList.remove('open');
+}
+
+// ─── Category collapse ───
+function toggleCat(headEl) {
+  const listEl = headEl.nextElementSibling;
+  const toggle = headEl.querySelector('.ai-cat-toggle');
+  listEl.classList.toggle('collapsed');
+  toggle.classList.toggle('open');
+}
+
+// ─── Tag selection (real-time, all multi-select) ───
+function selectTag(rowEl, cat, val) {
+  if (!selectedTags[cat]) selectedTags[cat] = [];
+  const idx = selectedTags[cat].indexOf(val);
+  if (idx === -1) {
+    selectedTags[cat].push(val);
+  } else {
+    selectedTags[cat].splice(idx, 1);
+    if (selectedTags[cat].length === 0) delete selectedTags[cat];
+  }
+  syncDropdownState();
+  applyFilter();  // real-time
+}
+
+function syncDropdownState() {
+  document.querySelectorAll('.ai-check-row').forEach(row => {
+    const cat = row.closest('.ai-check-list').dataset.cat;
+    const val = row.querySelector('.ai-check-label').textContent.trim();
+    row.classList.toggle('selected', !!(selectedTags[cat] && selectedTags[cat].includes(val)));
+  });
+  const total = Object.values(selectedTags).reduce((s, arr) => s + arr.length, 0);
+  document.getElementById('dropdownClearBtn').style.display = total > 0 ? '' : 'none';
+}
+
+// ─── Apply filter ───
+function applyFilter() {
+  appliedTags = JSON.parse(JSON.stringify(selectedTags));
+
+  const hasFilter = Object.keys(appliedTags).length > 0;
+  document.getElementById('aiFilterBtn').classList.toggle('has-selection', hasFilter);
+
+  // Update active strip
+  const strip = document.getElementById('activeFilterStrip');
+  const tagList = document.getElementById('activeTagList');
+  if (hasFilter) {
+    strip.classList.add('show');
+    tagList.innerHTML = Object.entries(appliedTags).flatMap(([cat, vals]) =>
+      vals.map(v => `<span class="strip-tag" onclick="removeStripTag('${cat}','${v}')">${v} <span class="remove">×</span></span>`)
+    ).join('');
+  } else {
+    strip.classList.remove('show');
+    tagList.innerHTML = '';
+  }
+
+  // Filter files
+  let filtered = MOCK_FILES;
+  if (hasFilter) {
+    filtered = MOCK_FILES.filter(file =>
+      Object.entries(appliedTags).every(([cat, vals]) =>
+        vals.some(v => file.tags.some(t => t.cat === cat && t.val === v))
+      )
+    );
+  }
+  renderGrid(filtered);
+}
+
+// ─── Remove single strip tag ───
+function removeStripTag(cat, val) {
+  if (appliedTags[cat]) {
+    appliedTags[cat] = appliedTags[cat].filter(v => v !== val);
+    if (appliedTags[cat].length === 0) delete appliedTags[cat];
+  }
+  selectedTags = JSON.parse(JSON.stringify(appliedTags));
+  applyFilter();
+}
+
+// ─── Clear all ───
+function clearAllTags() {
+  selectedTags = {};
+  appliedTags = {};
+  syncDropdownState();
+  applyFilter();
+}
+
+// ─── Open file ───
+function openFile(id) {
+  // placeholder
+}
+
+// Content tab switch
+document.querySelectorAll('.ctab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.ctab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

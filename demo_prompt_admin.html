@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Prompt 管理 - 后台管理系统</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f0f2f5; color: #1a1a2e; font-size: 14px; }
+
+  /* Layout */
+  .layout { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 240px; background: #1d2033; flex-shrink: 0; display: flex; flex-direction: column; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar-logo { padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .sidebar-logo .logo-title { color: #fff; font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .sidebar-logo .logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .sidebar-logo .logo-sub { color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 4px; padding-left: 36px; }
+  .sidebar-nav { padding: 12px 0; flex: 1; }
+  .nav-section { padding: 8px 20px 4px; color: rgba(255,255,255,0.3); font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 20px; color: rgba(255,255,255,0.6); cursor: pointer; transition: all 0.15s; font-size: 13px; }
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+  .nav-item.active { background: rgba(102,126,234,0.2); color: #667eea; border-right: 2px solid #667eea; }
+  .nav-item .icon { font-size: 15px; width: 18px; text-align: center; }
+
+  /* Top bar */
+  .topbar { background: #fff; border-bottom: 1px solid #e8eaf0; padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .topbar-left { display: flex; align-items: center; gap: 8px; }
+  .breadcrumb { display: flex; align-items: center; gap: 6px; color: #888; font-size: 13px; }
+  .breadcrumb .sep { color: #ccc; }
+  .breadcrumb .current { color: #1a1a2e; font-weight: 500; }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #667eea, #764ba2); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+  /* Content */
+  .content { flex: 1; overflow-y: auto; padding: 24px; display: flex; gap: 20px; }
+
+  /* Tenant panel */
+  .tenant-panel { width: 220px; flex-shrink: 0; }
+  .panel-card { background: #fff; border-radius: 10px; border: 1px solid #eaecf0; overflow: hidden; }
+  .panel-header { padding: 14px 16px; border-bottom: 1px solid #eaecf0; display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-weight: 600; font-size: 13px; color: #374151; }
+  .btn-xs { padding: 4px 10px; border-radius: 6px; border: 1px solid #d1d5db; background: #fff; color: #374151; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .btn-xs:hover { background: #f9fafb; border-color: #9ca3af; }
+  .btn-xs-del { padding: 4px 8px; border-radius: 6px; border: 1px solid #fecaca; background: #fff; color: #dc2626; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .btn-xs-del:hover { background: #fee2e2; border-color: #dc2626; }
+  .tags-empty-hint { color: #9ca3af; font-size: 12px; }
+
+  /* Tenant combobox */
+  .combobox-wrap { position: relative; }
+  .combobox-input { width: 100%; padding: 8px 36px 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; color: #1a1a2e; outline: none; cursor: pointer; background: #fff; transition: border-color 0.15s; }
+  .combobox-input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.12); }
+  .combobox-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 10px; pointer-events: none; transition: transform 0.15s; }
+  .combobox-arrow.open { transform: translateY(-50%) rotate(180deg); }
+  .combobox-dropdown { display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 6px 16px rgba(0,0,0,0.10); z-index: 10; overflow: hidden; }
+  .combobox-dropdown.show { display: block; }
+  .combobox-option { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; font-size: 13px; color: #374151; cursor: pointer; transition: background 0.1s; }
+  .combobox-option:hover { background: #f5f3ff; }
+  .combobox-option.selected { background: #f0f0ff; color: #5b21b6; font-weight: 500; }
+  .combobox-option .opt-check { color: #667eea; font-size: 13px; }
+  .combobox-empty { padding: 12px; text-align: center; font-size: 12px; color: #9ca3af; }
+
+  .tenant-item { padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #f3f4f6; transition: all 0.15s; }
+  .tenant-item:last-child { border-bottom: none; }
+  .tenant-item:hover { background: #f9fafb; }
+  .tenant-item.active { background: #f0f0ff; }
+  .tenant-avatar { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .tenant-info .name { font-size: 13px; font-weight: 500; color: #1a1a2e; }
+  .tenant-info .meta { font-size: 11px; color: #888; margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; flex-shrink: 0; }
+  .status-dot.off { background: #d1d5db; }
+
+  /* Main config area */
+  .config-area { flex: 1; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+  /* Config header */
+  .config-header { background: #fff; border-radius: 10px; border: 1px solid #eaecf0; padding: 18px 20px; display: flex; align-items: flex-start; justify-content: space-between; }
+  .config-header-left .title { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge-green { background: #d1fae5; color: #059669; }
+  .badge-blue { background: #dbeafe; color: #2563eb; }
+  .badge-orange { background: #fed7aa; color: #ea580c; }
+  .badge-purple { background: #ede9fe; color: #7c3aed; }
+  .badge-gray { background: #f3f4f6; color: #6b7280; }
+  .config-header-left .sub { color: #6b7280; font-size: 13px; margin-top: 6px; display: flex; align-items: center; gap: 12px; }
+  .config-header-left .sub span { display: flex; align-items: center; gap: 4px; }
+  .config-header-right { display: flex; gap: 8px; align-items: center; }
+  /* Toggle switch */
+  .toggles-group { display: flex; align-items: center; gap: 6px; margin-right: 4px; }
+  .toggle-wrap { display: flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; }
+  .toggle-label { font-size: 12px; color: #6b7280; white-space: nowrap; }
+  .toggle-status { font-size: 12px; font-weight: 600; white-space: nowrap; min-width: 36px; }
+  .toggle-status.on { color: #059669; }
+  .toggle-status.off { color: #9ca3af; }
+  .toggle-switch { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #d1d5db; border-radius: 20px; transition: background 0.2s; }
+  .toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; bottom: 2px; background: #fff; border-radius: 50%; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .toggle-switch input:checked + .toggle-slider { background: #667eea; }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+  /* Feature toggle row (inside each feature tab) */
+  .feature-toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: #f9fafb; border-radius: 10px; border: 1px solid #e5e7eb; }
+  .feature-icon { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .feature-icon.tagging { background: #ede9fe; }
+  .feature-icon.naming { background: #dbeafe; }
+  .feature-status-text { font-size: 13px; font-weight: 600; }
+  .feature-status-text.on { color: #059669; }
+  .feature-status-text.off { color: #9ca3af; }
+  /* Feature disabled empty state */
+  .feature-off-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 20px; text-align: center; }
+  .feature-off-icon { font-size: 40px; margin-bottom: 14px; opacity: 0.4; }
+  .feature-off-title { font-size: 15px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+  .feature-off-desc { font-size: 13px; color: #9ca3af; line-height: 1.6; max-width: 320px; }
+
+  .btn { padding: 8px 16px; border-radius: 8px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
+  .btn-primary { background: #667eea; color: #fff; }
+  .btn-primary:hover { background: #5a6fd8; }
+  .btn-secondary { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+  .btn-secondary:hover { background: #f9fafb; }
+  .btn-danger { background: #fff; color: #dc2626; border: 1px solid #fecaca; }
+  .btn-danger:hover { background: #fff5f5; }
+
+  /* Tabs */
+  .tabs-bar { display: flex; gap: 0; border-bottom: 1px solid #eaecf0; background: #fff; border-radius: 10px 10px 0 0; padding: 0 20px; margin-bottom: -1px; }
+  .tab-btn { padding: 12px 16px; border: none; background: none; font-size: 13px; color: #6b7280; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; font-weight: 500; }
+  .tab-btn.active { color: #667eea; border-bottom-color: #667eea; }
+  .tab-btn:hover:not(.active) { color: #374151; }
+
+  /* Tab content */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Prompt editor card */
+  .editor-card { background: #fff; border-radius: 0 0 10px 10px; border: 1px solid #eaecf0; border-top: none; padding: 20px; }
+
+  .form-group { margin-bottom: 20px; }
+  .form-label { font-size: 13px; font-weight: 500; color: #374151; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .form-label .tip { font-size: 11px; color: #9ca3af; font-weight: 400; }
+  .form-input { width: 100%; padding: 8px 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; color: #1a1a2e; transition: border-color 0.15s; outline: none; font-family: inherit; }
+  .form-input:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  .prompt-editor { width: 100%; min-height: 160px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 13px; color: #1a1a2e; font-family: 'Menlo', 'Monaco', 'Consolas', monospace; line-height: 1.6; resize: vertical; outline: none; transition: border-color 0.15s; background: #fafafa; }
+  .prompt-editor:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); background: #fff; }
+
+  .placeholder-tag { display: inline-flex; align-items: center; padding: 3px 8px; background: #f0f0ff; color: #667eea; border-radius: 4px; font-size: 11px; font-family: monospace; cursor: pointer; border: 1px solid #c7d2fe; }
+  .placeholder-tag:hover { background: #e0e7ff; }
+
+  /* Schema editor */
+  .schema-section { background: #fff; border-radius: 10px; border: 1px solid #eaecf0; overflow: hidden; }
+  .schema-section-header { padding: 14px 20px; border-bottom: 1px solid #eaecf0; display: flex; align-items: center; justify-content: space-between; background: #f9fafb; }
+  .schema-section-title { font-weight: 600; font-size: 13px; color: #374151; display: flex; align-items: center; gap: 8px; }
+  .schema-categories { padding: 16px 20px; display: flex; flex-direction: column; gap: 16px; }
+  .category-block { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  .category-head { padding: 10px 14px; background: #f9fafb; display: flex; align-items: center; justify-content: space-between; }
+  .category-name { font-weight: 600; font-size: 13px; color: #374151; display: flex; align-items: center; gap: 8px; }
+  .category-rule { font-size: 11px; color: #9ca3af; }
+  .category-tags { padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .schema-tag { display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px 5px 10px; background: #f3f4f6; border-radius: 6px; border: 1px solid #e5e7eb; font-size: 12px; color: #374151; transition: all 0.15s; position: relative; }
+  .schema-tag:hover { border-color: #667eea; background: #f0f0ff; }
+  /* 说明圆点 */
+  .def-dot-wrap { display: inline-flex; align-items: center; position: relative; flex-shrink: 0; }
+  .def-dot { width: 6px; height: 6px; border-radius: 50%; background: #818cf8; cursor: default; }
+  .def-tip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; font-size: 11px; padding: 7px 10px; border-radius: 6px; white-space: normal; max-width: 220px; min-width: 140px; z-index: 200; line-height: 1.5; pointer-events: none; }
+  .def-tip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: #1a1a2e; }
+  .def-dot-wrap:hover .def-tip { display: block; }
+  /* 操作按钮区，hover 才显示 */
+  .tag-acts { display: none; align-items: center; gap: 2px; margin-left: 2px; }
+  .schema-tag:hover .tag-acts { display: inline-flex; }
+  .tag-edit-def { font-size: 11px; cursor: pointer; padding: 1px 5px; border-radius: 3px; transition: background 0.12s; white-space: nowrap; }
+  .has-def .tag-edit-def { color: #667eea; }
+  .has-def .tag-edit-def:hover { background: #c7d2fe; }
+  .schema-tag:not(.has-def) .tag-edit-def { color: #9ca3af; }
+  .schema-tag:not(.has-def):hover .tag-edit-def { color: #667eea; }
+  .tag-del { color: #d1d5db; font-size: 13px; transition: color 0.15s; cursor: pointer; padding: 0 2px; }
+  .schema-tag:hover .tag-del { color: #dc2626; }
+  .add-tag-btn { display: inline-flex; align-items: center; gap: 4px; padding: 5px 10px; border: 1px dashed #d1d5db; border-radius: 6px; font-size: 12px; color: #9ca3af; cursor: pointer; transition: all 0.15s; }
+  .add-tag-btn:hover { border-color: #667eea; color: #667eea; background: #f0f0ff; }
+
+  /* Required tag indicator dot */
+  .req-dot-wrap { display: inline-flex; align-items: center; position: relative; flex-shrink: 0; }
+  .req-dot { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; cursor: default; }
+  .req-dot-tip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; font-size: 11px; padding: 7px 10px; border-radius: 6px; white-space: normal; max-width: 180px; min-width: 120px; z-index: 200; line-height: 1.5; pointer-events: none; }
+  .req-dot-tip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: #1a1a2e; }
+  .req-dot-wrap:hover .req-dot-tip { display: block; }
+  /* Required tag config button */
+  .tag-req-btn { font-size: 11px; cursor: pointer; padding: 1px 5px; border-radius: 3px; color: #d97706; transition: background 0.12s; white-space: nowrap; }
+  .tag-req-btn:hover { background: #fef3c7; }
+
+  /* History tab */
+  .history-table { width: 100%; border-collapse: collapse; }
+  .history-table th { text-align: left; padding: 10px 16px; background: #f9fafb; border-bottom: 1px solid #eaecf0; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .history-table td { padding: 12px 16px; border-bottom: 1px solid #f3f4f6; font-size: 13px; color: #374151; vertical-align: middle; }
+  .history-table tr:last-child td { border-bottom: none; }
+  .history-table tr:hover td { background: #fafafa; }
+  .version-num { font-family: monospace; font-weight: 600; color: #667eea; }
+  .diff-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
+  .diff-add { color: #059669; }
+  .diff-del { color: #dc2626; }
+  .diff-mod { color: #d97706; }
+  .active-version-row td { background: #f0f0ff !important; }
+  .active-version-row .version-num::after { content: ' (当前)'; color: #059669; font-size: 11px; }
+  .row-actions { display: flex; gap: 6px; opacity: 0; transition: opacity 0.15s; }
+  .history-table tr:hover .row-actions { opacity: 1; }
+  .btn-link { background: none; border: none; color: #667eea; font-size: 12px; cursor: pointer; padding: 2px 4px; text-decoration: underline; }
+  .btn-link.danger { color: #dc2626; }
+  /* History filter tabs */
+  .history-filter { display: flex; gap: 6px; }
+  .filter-btn { padding: 4px 12px; border-radius: 20px; border: 1px solid #e5e7eb; background: #fff; font-size: 12px; color: #6b7280; cursor: pointer; transition: all 0.15s; }
+  .filter-btn:hover { border-color: #667eea; color: #667eea; }
+  .filter-btn.active { background: #667eea; color: #fff; border-color: #667eea; }
+  /* Module badges */
+  .mod-badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; white-space: nowrap; }
+  .mod-tagging { background: #ede9fe; color: #7c3aed; }
+  .mod-naming  { background: #dbeafe; color: #2563eb; }
+  .mod-schema  { background: #dcfce7; color: #16a34a; }
+
+  /* Usage tab */
+  .usage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .usage-card { background: #f9fafb; border-radius: 8px; padding: 16px; border: 1px solid #e5e7eb; }
+  .usage-card .label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
+  .usage-card .value { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+  .usage-card .sub { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+  .usage-card .trend-up { color: #059669; }
+  .usage-card .trend-down { color: #dc2626; }
+  .mini-chart { height: 48px; background: linear-gradient(to right, #667eea22, #667eea44); border-radius: 4px; position: relative; margin-top: 8px; overflow: hidden; }
+  .mini-chart::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: #667eea; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #fff; border-radius: 12px; width: 480px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.2); overflow: hidden; }
+  .modal-header { padding: 18px 20px; border-bottom: 1px solid #eaecf0; display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-weight: 600; font-size: 15px; }
+  .modal-close { width: 28px; height: 28px; border-radius: 6px; border: none; background: #f3f4f6; cursor: pointer; font-size: 16px; color: #6b7280; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+  .modal-close:hover { background: #e5e7eb; }
+  .modal-body { padding: 20px; }
+  .modal-footer { padding: 14px 20px; border-top: 1px solid #eaecf0; display: flex; justify-content: flex-end; gap: 8px; }
+
+  /* Toast */
+  .toast { position: fixed; top: 20px; right: 20px; background: #1a1a2e; color: #fff; padding: 12px 18px; border-radius: 8px; font-size: 13px; z-index: 9999; display: none; align-items: center; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); animation: slideIn 0.2s ease; }
+  .toast.show { display: flex; }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+  .toast-icon { font-size: 16px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+
+  .divider { height: 1px; background: #f3f4f6; margin: 20px 0; }
+  .save-bar { padding: 14px 20px; border-top: 1px solid #eaecf0; display: flex; align-items: center; justify-content: space-between; background: #fafafa; }
+  .save-bar-hint { font-size: 12px; color: #9ca3af; display: flex; align-items: center; gap: 6px; }
+  .dot-unsaved { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; }
+  .dot-unsaved.saved { background: #10b981; }
+
+  .inline-input { padding: 4px 8px; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; outline: none; width: 120px; }
+  .inline-input:focus { border-color: #667eea; }
+  /* Compare Modal */
+  .compare-modal { width: 820px; max-width: 96vw; }
+  .compare-header-bar { display: flex; align-items: center; gap: 8px; padding: 10px 18px 0; }
+  .compare-version-select { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .compare-version-select label { font-size: 12px; color: #6b7280; white-space: nowrap; }
+  .compare-version-select select { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 7px; font-size: 13px; color: #374151; outline: none; cursor: pointer; }
+  .compare-version-select select:focus { border-color: #667eea; }
+  .compare-vs { font-size: 12px; font-weight: 600; color: #9ca3af; padding: 0 6px; }
+  .compare-version-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: #374151; }
+  .compare-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; max-height: 62vh; overflow-y: auto; }
+  .diff-section { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+  .diff-section-title { padding: 8px 14px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 12px; font-weight: 600; color: #374151; display: flex; align-items: center; gap: 6px; }
+  .diff-cols { display: grid; grid-template-columns: 1fr 1fr; }
+  .diff-col { padding: 12px 14px; }
+  .diff-col + .diff-col { border-left: 1px solid #e5e7eb; }
+  .diff-col-label { font-size: 11px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .diff-text { font-size: 12px; line-height: 1.7; color: #374151; white-space: pre-wrap; font-family: 'Menlo','Monaco','Consolas',monospace; }
+  .diff-add { background: #dcfce7; color: #15803d; border-radius: 2px; }
+  .diff-del { background: #fee2e2; color: #b91c1c; border-radius: 2px; text-decoration: line-through; }
+  .diff-unchanged { color: #6b7280; }
+  .diff-tags-grid { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; }
+  .diff-tag-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 5px; font-size: 12px; font-weight: 500; }
+  .diff-tag-added { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+  .diff-tag-removed { background: #fee2e2; color: #b91c1c; border: 1px dashed #fca5a5; text-decoration: line-through; }
+  .diff-tag-same { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; }
+  .diff-empty { padding: 16px 14px; font-size: 12px; color: #9ca3af; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-title">
+        <div class="logo-icon">🤖</div>
+        AI 管理平台
+      </div>
+      <div class="logo-sub">素材智能打标系统</div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">概览</div>
+      <div class="nav-item" onclick="showToast('功能开发中')">
+        <span class="icon">📊</span> 数据看板
+      </div>
+      <div class="nav-section">AI 配置</div>
+      <div class="nav-item active">
+        <span class="icon">💬</span> Prompt 管理
+      </div>
+      <div class="nav-item" onclick="showToast('功能开发中')">
+        <span class="icon">🏷️</span> 标签知识库
+      </div>
+      <div class="nav-item" onclick="showToast('功能开发中')">
+        <span class="icon">⚙️</span> 模型配置
+      </div>
+      <div class="nav-section">监控</div>
+      <div class="nav-item" onclick="showToast('功能开发中')">
+        <span class="icon">📈</span> 消耗统计
+      </div>
+      <div class="nav-item" onclick="showToast('功能开发中')">
+        <span class="icon">📋</span> 任务日志
+      </div>
+      <div class="nav-section">系统</div>
+      <div class="nav-item" onclick="showToast('功能开发中')">
+        <span class="icon">🏢</span> 企业管理
+      </div>
+      <div class="nav-item" onclick="showToast('功能开发中')">
+        <span class="icon">👤</span> 账号设置
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="breadcrumb">
+          <span>AI 配置</span>
+          <span class="sep">›</span>
+          <span class="current">Prompt 管理</span>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div style="font-size:12px;color:#9ca3af;">超级管理员</div>
+        <div class="avatar">王</div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Tenant Panel -->
+      <div class="tenant-panel">
+        <div class="panel-card">
+          <div class="panel-header">
+            <div class="panel-title">企业列表</div>
+            <button class="btn-xs" onclick="openSelectTenantModal()">+ 新增</button>
+          </div>
+          <div class="tenant-item active" onclick="selectTenant(this, 'faw_vw')">
+            <div class="tenant-avatar" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">大</div>
+            <div class="tenant-info">
+              <div class="name">一汽大众</div>
+              <div class="meta" id="faw_vw-meta"><div class="status-dot"></div>打标✓ 命名✓ · v1.2.0</div>
+            </div>
+          </div>
+          <div class="tenant-item" onclick="selectTenant(this, 'changan')">
+            <div class="tenant-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706)">长</div>
+            <div class="tenant-info">
+              <div class="name">长安汽车</div>
+              <div class="meta"><div class="status-dot"></div>仅打标 · v1.0.1</div>
+            </div>
+          </div>
+          <div class="tenant-item" onclick="selectTenant(this, 'byd')">
+            <div class="tenant-avatar" style="background:linear-gradient(135deg,#10b981,#059669)">比</div>
+            <div class="tenant-info">
+              <div class="name">比亚迪</div>
+              <div class="meta"><div class="status-dot off"></div>未启用 · 待配置</div>
+            </div>
+          </div>
+          <div class="tenant-item" onclick="selectTenant(this, 'nio')">
+            <div class="tenant-avatar" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">蔚</div>
+            <div class="tenant-info">
+              <div class="name">蔚来汽车</div>
+              <div class="meta"><div class="status-dot off"></div>未启用 · 待配置</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Config Area -->
+      <div class="config-area">
+
+        <!-- Config Header -->
+        <div class="config-header">
+          <div class="config-header-left">
+            <div class="title">
+              一汽大众 — AI 配置
+              <span class="badge badge-green" id="badgeTagging">✓ 打标</span>
+              <span class="badge badge-green" id="badgeNaming">✓ 命名</span>
+              <span class="badge badge-blue">v1.2.0</span>
+            </div>
+            <div class="sub">
+              <span>⏱ 最后更新：2026-03-28 14:30</span>
+              <span>👤 王工</span>
+              <span>doubao-vision-pro</span>
+            </div>
+          </div>
+          <div class="config-header-right">
+            <button class="btn btn-secondary" onclick="document.getElementById('testModal').classList.add('show')">🧪 测试效果</button>
+            <button class="btn btn-primary" onclick="document.getElementById('saveModal').classList.add('show')">💾 保存新版本</button>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div>
+          <div class="tabs-bar">
+            <button class="tab-btn active" onclick="switchTab('tagging',this)">AI 打标</button>
+            <button class="tab-btn" onclick="switchTab('naming',this)">AI 命名</button>
+            <button class="tab-btn" onclick="switchTab('schema',this)">标签 Schema</button>
+            <button class="tab-btn" onclick="switchTab('history',this)">历史版本</button>
+            <button class="tab-btn" onclick="switchTab('usage',this)">消耗统计</button>
+          </div>
+
+          <!-- Tab: AI 打标 -->
+          <div id="tab-tagging" class="tab-content active">
+            <div class="editor-card">
+
+              <!-- 功能开关行 -->
+              <div class="feature-toggle-row" id="taggingToggleRow">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div>
+                    <div style="font-size:14px;font-weight:600;color:#1a1a2e;">AI 打标</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:1px;">自动识别文件内容并从标签知识库中选取匹配标签</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span class="feature-status-text on" id="taggingStatusText">已启用</span>
+                  <label class="toggle-switch" title="开启或关闭该企业的 AI 打标">
+                    <input type="checkbox" id="taggingToggle" checked onchange="toggleTagging(this)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 关闭状态空卡片 -->
+              <div class="feature-off-state" id="taggingOffState" style="display:none;">
+                <div class="feature-off-title">AI 打标功能已关闭</div>
+                <div class="feature-off-desc">关闭后新上传的文件将不再自动识别内容、生成 AI 标签。<br>已打标的历史文件不受影响。</div>
+                <button class="btn btn-primary" style="margin-top:8px;" onclick="enableFeature('tagging')">开启 AI 打标</button>
+              </div>
+
+              <!-- 配置内容（启用时显示） -->
+              <div id="taggingConfig">
+                <div class="divider" style="margin:16px 0 20px;"></div>
+                <div class="form-row">
+                  <div class="form-group" style="max-width:280px;">
+                    <div class="form-label">模型选择</div>
+                    <select class="form-input">
+                      <option>doubao-vision-pro（多模态）</option>
+                      <option>doubao-pro-32k（纯文本）</option>
+                      <option>doubao-lite-4k</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <div class="form-label">System Prompt 模板</div>
+                  <textarea class="prompt-editor" id="promptEditor">你是一个专业的媒体素材分析助手，服务于 {{tenant_name}}。
+
+## 你的任务
+分析提供的媒体文件，严格从以下标签知识库中选取合适的标签。
+
+## 标签知识库
+{{schema_json}}
+
+## 输出要求
+- 仅使用知识库中存在的标签值，禁止自行发明新标签
+- 输出为严格 JSON 格式，不要输出其他内容
+
+## 输出格式
+{
+  "tags": [
+    {"category": "分类名", "value": "标签值"}
+  ],
+  "reasoning": "简短的判断依据（≤50字）"
+}</textarea>
+                </div>
+
+                <div class="save-bar" style="margin: 20px -20px -20px; border-radius: 0 0 10px 10px;">
+                  <div class="save-bar-hint">
+                    <div class="dot-unsaved"></div>
+                    有未保存的更改
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary" onclick="showToast('已重置为上次保存版本')">重置</button>
+                    <button class="btn btn-primary" onclick="document.getElementById('saveModal').classList.add('show')">保存为新版本</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: AI 命名 -->
+          <div id="tab-naming" class="tab-content">
+            <div class="editor-card">
+
+              <!-- 功能开关行 -->
+              <div class="feature-toggle-row" id="namingToggleRow">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div>
+                    <div style="font-size:14px;font-weight:600;color:#1a1a2e;">AI 命名</div>
+                    <div style="font-size:12px;color:#6b7280;margin-top:1px;">根据文件内容和命名规则自动生成标准化建议文件名</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <span class="feature-status-text on" id="namingStatusText">已启用</span>
+                  <label class="toggle-switch" title="开启或关闭该企业的 AI 命名">
+                    <input type="checkbox" id="namingToggle" checked onchange="toggleNaming(this)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- 关闭状态空卡片 -->
+              <div class="feature-off-state" id="namingOffState" style="display:none;">
+                <div class="feature-off-title">AI 命名功能已关闭</div>
+                <div class="feature-off-desc">关闭后新上传的文件将不再自动生成建议文件名。<br>AI 打标功能不受影响，仍可正常运行。</div>
+                <button class="btn btn-primary" style="margin-top:8px;" onclick="enableFeature('naming')">开启 AI 命名</button>
+              </div>
+
+              <!-- 配置内容（启用时显示） -->
+              <div id="namingConfig">
+                <div class="divider" style="margin:16px 0 20px;"></div>
+
+                <div class="form-group">
+                  <div class="form-label">System Prompt 模板</div>
+                  <textarea class="prompt-editor" id="namingPromptEditor">你是一个专业的文件命名助手，服务于 {{tenant_name}}。
+
+## 你的任务
+根据提供的文件内容和分析结果，按照以下命名规则生成标准化的文件名。
+
+## 命名规则
+{{naming_rules}}
+
+## 输出要求
+- 严格遵守命名规则中的格式和限制
+- 日期使用 {{today_date}}
+- 输出为严格 JSON 格式，不要输出其他内容
+
+## 输出格式
+{
+  "suggested_name": "建议文件名（不含扩展名）",
+  "reasoning": "命名依据（≤30字）"
+}</textarea>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="form-group">
+                  <div class="form-label" style="font-size:13px;margin-bottom:10px;">
+                    命名规则配置
+                    <span class="tip">对应 Prompt 中的 {{naming_rules}} 占位符，告诉模型如何为文件命名</span>
+                  </div>
+
+                  <div style="background:#f8f9fc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px;">
+                    <!-- 格式模板 -->
+                    <div>
+                      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">命名格式模板</div>
+                      <input class="form-input" id="namingFormat" value="[车型]_[核心标签]_[内容来源]_[日期YYYYMMDD]" placeholder="如 [车型]_[亮点]_[来源]_[日期YYYYMMDD]" oninput="updateNamingPreview()">
+                      <div style="margin-top:7px;display:flex;flex-wrap:wrap;gap:5px;align-items:center;">
+                        <span style="font-size:11px;color:#9ca3af;">快速插入字段：</span>
+                        <span class="placeholder-tag" onclick="insertNamingField('[车型]')">[车型]</span>
+                        <span class="placeholder-tag" onclick="insertNamingField('[核心标签]')">[核心标签]</span>
+                        <span class="placeholder-tag" onclick="insertNamingField('[内容来源]')">[内容来源]</span>
+                        <span class="placeholder-tag" onclick="insertNamingField('[日期YYYYMMDD]')">[日期YYYYMMDD]</span>
+                        <span class="placeholder-tag" onclick="insertNamingField('[序号]')">[序号]</span>
+                      </div>
+                      <div style="margin-top:6px;font-size:11px;color:#9ca3af;">
+                        示例输出：<span style="font-family:monospace;color:#374151;">全新探岳L_外观_官方发布_20260330</span>
+                      </div>
+                    </div>
+
+                    <!-- 补充规则 -->
+                    <div>
+                      <div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">
+                        补充说明
+                        <span style="font-size:11px;font-weight:400;color:#9ca3af;">（选填）详细描述命名细节和限制</span>
+                      </div>
+                      <textarea class="prompt-editor" id="namingRulesEditor" style="min-height:100px;" oninput="updateNamingPreview()" placeholder="例如：
+· 车型名使用官方全称（如「全新探岳L」而非「探岳L」）
+· 日期取文件上传当天，格式 YYYYMMDD
+· 同批次多文件末位追加 _001 _002 序号
+· 只允许下划线连接，禁止空格和特殊符号
+· 文件名总长度不超过 80 个字符"></textarea>
+                    </div>
+
+                    <!-- 预览 -->
+                    <div style="background:#fff;border:1px solid #c7d2fe;border-radius:8px;padding:12px;">
+                      <div style="font-size:11px;color:#6b7280;margin-bottom:6px;font-weight:600;">注入到 Prompt 后的效果预览</div>
+                      <div id="namingPreview" style="font-size:12px;color:#374151;line-height:1.7;white-space:pre-wrap;font-family:inherit;">命名格式：[车型]_[核心标签]_[内容来源]_[日期YYYYMMDD]
+
+补充规则：
+· 车型名使用官方全称（如「全新探岳L」而非「探岳L」）
+· 日期取文件上传当天，格式 YYYYMMDD
+· 同批次多文件末位追加 _001 _002 序号</div>
+                      <div style="margin-top:8px;font-size:11px;color:#9ca3af;display:flex;align-items:center;gap:4px;">
+                        <span>💡 使用</span>
+                        <span style="font-family:monospace;background:#f0f0ff;color:#667eea;padding:1px 5px;border-radius:3px;">{{naming_rules}}</span>
+                        <span>占位符将此内容注入 System Prompt</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="save-bar" style="margin: 4px -20px -20px; border-radius: 0 0 10px 10px;">
+                  <div class="save-bar-hint">
+                    <div class="dot-unsaved"></div>
+                    有未保存的更改
+                  </div>
+                  <div style="display:flex;gap:8px;">
+                    <button class="btn btn-secondary" onclick="showToast('已重置为上次保存版本')">重置</button>
+                    <button class="btn btn-primary" onclick="document.getElementById('saveModal').classList.add('show')">保存为新版本</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: Schema -->
+          <div id="tab-schema" class="tab-content">
+            <div class="editor-card" style="padding:0;">
+              <div style="padding:14px 20px;border-bottom:1px solid #eaecf0;display:flex;align-items:center;justify-content:space-between;background:#f9fafb;">
+                <div style="font-size:13px;color:#6b7280;">当前共 <strong style="color:#374151" id="catCount">8</strong> 个分类，<strong style="color:#374151">61</strong> 个标签</div>
+                <div style="display:flex;gap:8px;">
+                  <button class="btn btn-secondary" onclick="showToast('已导出 schema.json')">⬇ 导出 JSON</button>
+                  <button class="btn btn-secondary" onclick="document.getElementById('importModal').classList.add('show')">⬆ 导入</button>
+                  <button class="btn btn-primary" onclick="document.getElementById('addCatModal').classList.add('show')">+ 新增分类</button>
+                </div>
+              </div>
+              <div class="schema-categories" id="schemaCategories">
+
+                <!-- Category: 车型 -->
+                <div class="category-block" data-cat="车型">
+                  <div class="category-head">
+                    <div class="category-name">车型 <span class="badge badge-gray">26 个标签</span></div>
+                    <div style="display:flex;gap:6px;">
+                      <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
+                      <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
+                    </div>
+                  </div>
+                  <div class="category-tags">
+                    <div class="schema-tag has-def" data-name="全品牌" data-def="出现多品牌组合展示、车展全景、全系海报时触发"><span class="tag-name">全品牌</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">出现多品牌组合展示、车展全景、全系海报时触发</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'全品牌')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="迈腾B9" data-def="贯穿式尾灯、2025款新设计语言、带B9字样"><span class="tag-name">迈腾B9</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">贯穿式尾灯、2025款新设计语言、带B9字样</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'迈腾B9')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="迈腾B8" data-def="分体式尾灯、传统大众家族设计"><span class="tag-name">迈腾B8</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">分体式尾灯、传统大众家族设计</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'迈腾B8')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="迈腾" data-def="泛指迈腾系列（无法明确区分B8/B9时使用）"><span class="tag-name">迈腾</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">泛指迈腾系列（无法明确区分B8/B9时使用）</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'迈腾')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="全新揽巡" data-def="新一代揽巡（2024款及以后）"><span class="tag-name">全新揽巡</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">新一代揽巡（2024款及以后）</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'全新揽巡')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="全新高尔夫" data-def="最新一代高尔夫"><span class="tag-name">全新高尔夫</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">最新一代高尔夫</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'全新高尔夫')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="高尔夫GTI" data-def="经典GTI红色条纹格栅、运动化外观"><span class="tag-name">高尔夫GTI</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">经典GTI红色条纹格栅、运动化外观</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'高尔夫GTI')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="全新探岳L" data-def="2024年后长轴版探岳，L代表加长"><span class="tag-name">全新探岳L</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">2024年后长轴版探岳，L代表加长</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'全新探岳L')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="探岳X" data-def="运动版探岳，溜背设计"><span class="tag-name">探岳X</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">运动版探岳，溜背设计</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'探岳X')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="探岳" data-def="标准版探岳"><span class="tag-name">探岳</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">标准版探岳</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'探岳')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="ID.7 VIZZION" data-def="旗舰纯电轿车，流线型车身"><span class="tag-name">ID.7 VIZZION</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">旗舰纯电轿车，流线型车身</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'ID.7 VIZZION')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="ID.6 CROZZ" data-def="大型纯电SUV，6/7座"><span class="tag-name">ID.6 CROZZ</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">大型纯电SUV，6/7座</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'ID.6 CROZZ')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="ID.4 CROZZ" data-def="中型纯电SUV"><span class="tag-name">ID.4 CROZZ</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">中型纯电SUV</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'ID.4 CROZZ')">×</span></span></div>
+                    <div class="schema-tag" data-name="速腾" data-def=""><span class="tag-name">速腾</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'速腾')">×</span></span></div>
+                    <div class="schema-tag" data-name="宝来" data-def=""><span class="tag-name">宝来</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'宝来')">×</span></span></div>
+                    <div class="schema-tag" data-name="CC" data-def=""><span class="tag-name">CC</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'CC')">×</span></span></div>
+                  </div>
+                </div>
+
+                <!-- Category: 商品亮点 -->
+                <div class="category-block" data-cat="商品亮点">
+                  <div class="category-head">
+                    <div class="category-name">商品亮点 <span class="badge badge-gray">11 个标签</span></div>
+                    <div style="display:flex;gap:6px;">
+                      <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
+                      <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
+                    </div>
+                  </div>
+                  <div class="category-tags">
+                    <div class="schema-tag has-def" data-name="动力" data-def="发动机参数、马力、扭矩、加速性能（0-100km/h）、涡轮增压介绍"><span class="tag-name">动力</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">发动机参数、马力、扭矩、加速性能（0-100km/h）、涡轮增压介绍</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'动力')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="智驾" data-def="自动辅助驾驶、车道保持、自动泊车、IQ.Drive等智能驾驶功能"><span class="tag-name">智驾</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">自动辅助驾驶、车道保持、自动泊车、IQ.Drive等智能驾驶功能</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'智驾')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="外观" data-def="车身设计、颜色、灯组（大灯/尾灯）、轮毂、车身线条等外部视觉展示"><span class="tag-name">外观</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">车身设计、颜色、灯组（大灯/尾灯）、轮毂、车身线条等外部视觉展示</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'外观')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="内饰" data-def="座舱设计、材质工艺、多媒体屏幕、方向盘、座椅布局等车内空间展示"><span class="tag-name">内饰</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">座舱设计、材质工艺、多媒体屏幕、方向盘、座椅布局等车内空间展示</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'内饰')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="安全" data-def="碰撞测试成绩、安全气囊数量、主被动安全配置、AEB紧急制动等"><span class="tag-name">安全</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">碰撞测试成绩、安全气囊数量、主被动安全配置、AEB紧急制动等</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'安全')">×</span></span></div>
+                    <div class="schema-tag" data-name="配置" data-def=""><span class="tag-name">配置</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'配置')">×</span></span></div>
+                    <div class="schema-tag" data-name="舒适" data-def=""><span class="tag-name">舒适</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'舒适')">×</span></span></div>
+                    <div class="schema-tag" data-name="娱乐" data-def=""><span class="tag-name">娱乐</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'娱乐')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="操控" data-def="转向手感、弯道表现、底盘调校、悬挂系统、赛道/山路驾驶体验"><span class="tag-name">操控</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">转向手感、弯道表现、底盘调校、悬挂系统、赛道/山路驾驶体验</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'操控')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="空间" data-def="后排腿部空间、后备箱容积、第三排空间（适用SUV）、头部空间"><span class="tag-name">空间</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">后排腿部空间、后备箱容积、第三排空间（适用SUV）、头部空间</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'空间')">×</span></span></div>
+                    <div class="schema-tag" data-name="经济（油耗）" data-def=""><span class="tag-name">经济（油耗）</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'经济（油耗）')">×</span></span></div>
+                  </div>
+                </div>
+
+                <!-- Category: 内容来源 -->
+                <div class="category-block" data-cat="内容来源">
+                  <div class="category-head">
+                    <div class="category-name">内容来源 <span class="badge badge-gray">5 个标签</span></div>
+                    <div style="display:flex;gap:6px;">
+                      <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
+                      <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
+                    </div>
+                  </div>
+                  <div class="category-tags">
+                    <div class="schema-tag has-def" data-name="KOE" data-def="Key Opinion Employee，来自企业员工/经销商员工的真实分享"><span class="tag-name">KOE</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">Key Opinion Employee，来自企业员工/经销商员工的真实分享</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'KOE')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="UGC" data-def="User Generated Content，真实车主自发创作，非商业化"><span class="tag-name">UGC</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">User Generated Content，真实车主自发创作，非商业化</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'UGC')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="官方发布" data-def="品牌官方账号、官方媒体、品牌公关稿件、官方活动物料等"><span class="tag-name">官方发布</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">品牌官方账号、官方媒体、品牌公关稿件、官方活动物料等</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'官方发布')">×</span></span></div>
+                    <div class="schema-tag has-def" data-name="媒体测评" data-def="汽车垂直媒体（汽车之家、懂车帝等）、科技媒体、视频测评博主的专业测评内容"><span class="tag-name">媒体测评</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">汽车垂直媒体（汽车之家、懂车帝等）、科技媒体、视频测评博主的专业测评内容</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'媒体测评')">×</span></span></div>
+                    <div class="schema-tag" data-name="经销商" data-def=""><span class="tag-name">经销商</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'经销商')">×</span></span></div>
+                  </div>
+                </div>
+
+                <!-- Category: 种草内容 -->
+                <div class="category-block" data-cat="种草内容">
+                  <div class="category-head">
+                    <div class="category-name">种草内容 <span class="badge badge-gray">7 个标签</span></div>
+                    <div style="display:flex;gap:6px;">
+                      <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
+                      <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
+                    </div>
+                  </div>
+                  <div class="category-tags">
+                    <div class="schema-tag has-def" data-name="讲车" data-def="专业/半专业的车辆功能介绍、测评开箱、配置解析类内容"><span class="tag-name">讲车</span><span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">专业/半专业的车辆功能介绍、测评开箱、配置解析类内容</span></span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">✎</span><span class="tag-del" onclick="delTag(this,'讲车')">×</span></span></div>
+                    <div class="schema-tag" data-name="生活" data-def=""><span class="tag-name">生活</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'生活')">×</span></span></div>
+                    <div class="schema-tag" data-name="家庭" data-def=""><span class="tag-name">家庭</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'家庭')">×</span></span></div>
+                    <div class="schema-tag" data-name="驾乘感受" data-def=""><span class="tag-name">驾乘感受</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'驾乘感受')">×</span></span></div>
+                    <div class="schema-tag" data-name="旅游" data-def=""><span class="tag-name">旅游</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'旅游')">×</span></span></div>
+                    <div class="schema-tag" data-name="户外露营" data-def=""><span class="tag-name">户外露营</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'户外露营')">×</span></span></div>
+                    <div class="schema-tag" data-name="通勤" data-def=""><span class="tag-name">通勤</span><span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">+ 说明</span><span class="tag-del" onclick="delTag(this,'通勤')">×</span></span></div>
+                  </div>
+                </div>
+
+                <div style="text-align:center;padding:12px 0;color:#9ca3af;font-size:12px;cursor:pointer;" onclick="showToast('展开更多分类')">
+                  ▼ 展开其余 4 个分类（品牌、服务、政策活动、对比内容）
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab: History -->
+          <div id="tab-history" class="tab-content">
+            <div class="editor-card" style="padding:0;">
+              <div style="padding:14px 20px;border-bottom:1px solid #eaecf0;display:flex;align-items:center;justify-content:space-between;background:#f9fafb;">
+                <div style="display:flex;align-items:center;gap:16px;">
+                  <div style="font-size:13px;color:#6b7280;">共 <strong style="color:#374151">8</strong> 条变更记录</div>
+                  <div class="history-filter">
+                    <button class="filter-btn active" onclick="filterHistory('all',this)">全部</button>
+                    <button class="filter-btn" onclick="filterHistory('tagging',this)">AI 打标</button>
+                    <button class="filter-btn" onclick="filterHistory('naming',this)">AI 命名</button>
+                  </div>
+                </div>
+                <div style="font-size:12px;color:#9ca3af;display:flex;align-items:center;gap:6px;">
+                  <span style="color:#059669;">●</span> 当前生效版本
+                </div>
+              </div>
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>版本号</th>
+                    <th>模块</th>
+                    <th>变更说明</th>
+                    <th>变动摘要</th>
+                    <th>操作人</th>
+                    <th>时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="historyBody">
+                  <!-- v1.2.0 tagging -->
+                  <tr class="active-version-row" data-module="tagging">
+                    <td><span class="version-num">v1.2.0</span> <span style="color:#059669;font-size:10px;">●</span></td>
+                    <td><span class="mod-badge mod-tagging">打标</span></td>
+                    <td>新增 ID.纯享版、全新速腾L 车型标签</td>
+                    <td><span class="diff-badge diff-add">+2 标签</span></td>
+                    <td>王工</td>
+                    <td>2026-03-28 14:30</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-link" onclick="openVersionDetail('v1.2.0','tagging')">查看</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <!-- v1.2.0 naming -->
+                  <tr class="active-version-row" data-module="naming">
+                    <td><span class="version-num">v1.2.0</span> <span style="color:#059669;font-size:10px;">●</span></td>
+                    <td><span class="mod-badge mod-naming">命名</span></td>
+                    <td>命名格式新增 [序号] 字段，补充多文件批次规则</td>
+                    <td><span class="diff-badge diff-mod">~1 命名规则</span></td>
+                    <td>王工</td>
+                    <td>2026-03-28 14:30</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-link" onclick="openVersionDetail('v1.2.0','naming')">查看</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <!-- v1.1.4: 仅命名 -->
+                  <tr data-module="naming">
+                    <td><span class="version-num">v1.1.4</span></td>
+                    <td><span class="mod-badge mod-naming">命名</span></td>
+                    <td>命名 Prompt 优化：强调禁止使用空格和特殊字符，长度上限调为 80 字符</td>
+                    <td><span class="diff-badge diff-mod">~1 命名 Prompt</span></td>
+                    <td>李工</td>
+                    <td>2026-03-25 09:40</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-link" onclick="openVersionDetail('v1.1.4','naming')">查看</button>
+                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.4','naming')">对比</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <!-- v1.1.3: 仅命名 -->
+                  <tr data-module="naming">
+                    <td><span class="version-num">v1.1.3</span></td>
+                    <td><span class="mod-badge mod-naming">命名</span></td>
+                    <td>首次配置命名 Prompt 及格式规则，默认格式 [车型]_[核心标签]_[内容来源]_[日期]</td>
+                    <td><span class="diff-badge diff-add">+1 命名 Prompt</span></td>
+                    <td>王工</td>
+                    <td>2026-03-22 16:10</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-link" onclick="openVersionDetail('v1.1.3','naming')">查看</button>
+                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.3','naming')">对比</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <!-- v1.1.2: 仅打标 -->
+                  <tr data-module="tagging">
+                    <td><span class="version-num">v1.1.2</span></td>
+                    <td><span class="mod-badge mod-tagging">打标</span></td>
+                    <td>修正「品牌历史」标签定义，补充 1937 年创始年份描述</td>
+                    <td><span class="diff-badge diff-mod">~1 标签定义</span></td>
+                    <td>李工</td>
+                    <td>2026-03-20 10:15</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-link" onclick="openVersionDetail('v1.1.2','tagging')">查看</button>
+                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.2','tagging')">对比</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <!-- v1.1.1: 仅打标 Prompt -->
+                  <tr data-module="tagging">
+                    <td><span class="version-num">v1.1.1</span></td>
+                    <td><span class="mod-badge mod-tagging">打标</span></td>
+                    <td>打标 Prompt 调整，增加「禁止自行发明新标签」强调语</td>
+                    <td><span class="diff-badge diff-mod">~1 打标 Prompt</span></td>
+                    <td>王工</td>
+                    <td>2026-03-15 16:40</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-link" onclick="openVersionDetail('v1.1.1','tagging')">查看</button>
+                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.1','tagging')">对比</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <!-- v1.1.0: 仅打标 Schema -->
+                  <tr data-module="tagging">
+                    <td><span class="version-num">v1.1.0</span></td>
+                    <td><span class="mod-badge mod-tagging">打标</span></td>
+                    <td>新增「对比内容」分类，增加 10 个竞品品牌标签</td>
+                    <td>
+                      <span class="diff-badge diff-add">+10 标签</span>
+                      <span class="diff-badge diff-add" style="margin-left:4px;">+1 分类</span>
+                    </td>
+                    <td>产品团队</td>
+                    <td>2026-03-08 09:20</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-link" onclick="openVersionDetail('v1.1.0','tagging')">查看</button>
+                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.0','tagging')">对比</button>
+                      </div>
+                    </td>
+                  </tr>
+                  <!-- v1.0.0: 打标初始版 -->
+                  <tr data-module="tagging">
+                    <td><span class="version-num">v1.0.0</span></td>
+                    <td><span class="mod-badge mod-tagging">打标</span></td>
+                    <td>初始版本，配置打标 Prompt 及 7 个标签分类（50 个标签）</td>
+                    <td>
+                      <span class="diff-badge diff-add">+50 标签</span>
+                      <span class="diff-badge diff-add" style="margin-left:4px;">+7 分类</span>
+                    </td>
+                    <td>王工</td>
+                    <td>2026-02-20 11:00</td>
+                    <td>
+                      <div class="row-actions">
+                        <button class="btn-link" onclick="openVersionDetail('v1.0.0','tagging')">查看</button>
+                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.0.0','tagging')">对比</button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab: Usage -->
+          <div id="tab-usage" class="tab-content">
+            <div class="editor-card">
+              <div style="margin-bottom:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <span style="font-size:12px;color:#6b7280;white-space:nowrap;">日期范围</span>
+                <input type="date" class="form-input" id="usageDateFrom" value="2026-03-01" style="width:140px;">
+                <span style="color:#9ca3af;font-size:12px;">—</span>
+                <input type="date" class="form-input" id="usageDateTo" value="2026-03-31" style="width:140px;">
+                <button class="btn btn-secondary" style="padding:6px 12px;" onclick="refreshUsage()">查询</button>
+                <button class="btn btn-secondary" style="padding:6px 12px;" onclick="showToast('已导出统计报表')">⬇ 导出</button>
+              </div>
+              <div class="usage-grid" style="margin-bottom:16px;">
+                <div class="usage-card">
+                  <div class="label">总 Token 消耗</div>
+                  <div class="value">2,441,820</div>
+                  <div class="sub trend-up">↑ 18.3% vs 上期</div>
+                  <div class="mini-chart"></div>
+                </div>
+                <div class="usage-card">
+                  <div class="label">处理文件数</div>
+                  <div class="value">1,284</div>
+                  <div class="sub trend-up">↑ 6.2% vs 上期</div>
+                  <div class="mini-chart" style="background:linear-gradient(to right,#10b98122,#10b98144);"></div>
+                </div>
+                <div class="usage-card">
+                  <div class="label">预估费用</div>
+                  <div class="value">¥ 48.60</div>
+                  <div class="sub">单文件均价 ¥ 0.038</div>
+                  <div class="mini-chart" style="background:linear-gradient(to right,#f59e0b22,#f59e0b44);"></div>
+                </div>
+              </div>
+
+              <div style="background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;overflow:hidden;">
+                <div style="padding:12px 16px;border-bottom:1px solid #e5e7eb;font-weight:600;font-size:13px;color:#374151;">按天明细</div>
+                <table style="width:100%;border-collapse:collapse;">
+                  <thead>
+                    <tr style="background:#f3f4f6;">
+                      <th style="text-align:left;padding:8px 16px;font-size:12px;color:#6b7280;font-weight:600;">日期</th>
+                      <th style="text-align:right;padding:8px 16px;font-size:12px;color:#6b7280;font-weight:600;">处理文件</th>
+                      <th style="text-align:right;padding:8px 16px;font-size:12px;color:#6b7280;font-weight:600;">Token 消耗</th>
+                      <th style="text-align:right;padding:8px 16px;font-size:12px;color:#6b7280;font-weight:600;">预估费用</th>
+                    </tr>
+                  </thead>
+                  <tbody id="usageDailyBody">
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-31</td><td style="text-align:right;padding:9px 16px;font-size:13px;">52</td><td style="text-align:right;padding:9px 16px;font-size:13px;">98,800</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥1.98</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-30</td><td style="text-align:right;padding:9px 16px;font-size:13px;">45</td><td style="text-align:right;padding:9px 16px;font-size:13px;">85,500</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥1.71</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-29</td><td style="text-align:right;padding:9px 16px;font-size:13px;">61</td><td style="text-align:right;padding:9px 16px;font-size:13px;">115,900</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥2.32</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-28</td><td style="text-align:right;padding:9px 16px;font-size:13px;">78</td><td style="text-align:right;padding:9px 16px;font-size:13px;">148,200</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥2.96</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-27</td><td style="text-align:right;padding:9px 16px;font-size:13px;">34</td><td style="text-align:right;padding:9px 16px;font-size:13px;">64,600</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥1.29</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-26</td><td style="text-align:right;padding:9px 16px;font-size:13px;">42</td><td style="text-align:right;padding:9px 16px;font-size:13px;">79,800</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥1.60</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-25</td><td style="text-align:right;padding:9px 16px;font-size:13px;">55</td><td style="text-align:right;padding:9px 16px;font-size:13px;">104,500</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥2.09</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;color:#9ca3af;font-size:12px;"><td style="padding:8px 16px;" colspan="4" style="text-align:center;">… 更早记录（共 31 天）</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save Modal -->
+<div class="modal-overlay" id="saveModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">保存为新版本</div>
+      <button class="modal-close" onclick="document.getElementById('saveModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <div class="form-label">版本号</div>
+        <input class="form-input" value="v1.2.1" placeholder="如 v1.2.1">
+      </div>
+      <div class="form-group">
+        <div class="form-label">变更说明 <span class="tip">（必填，便于历史追溯）</span></div>
+        <textarea class="form-input" style="height:80px;resize:vertical;" placeholder="描述本次修改的内容，如：新增XX车型标签，优化XX分类定义..."></textarea>
+      </div>
+      <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px;font-size:12px;color:#92400e;display:flex;gap:8px;">
+        <span>⚠️</span>
+        <span>保存后，新版本将立即对该企业生效，请确认 Prompt 和 Schema 已测试无误。</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('saveModal').classList.remove('show')">取消</button>
+      <button class="btn btn-primary" onclick="saveVersion()">确认保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Test Modal -->
+<div class="modal-overlay" id="testModal">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">🧪 效果测试</div>
+      <button class="modal-close" onclick="document.getElementById('testModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <div class="form-label">测试图片 URL</div>
+        <input class="form-input" placeholder="粘贴图片 URL，或上传本地文件">
+      </div>
+      <div style="border:2px dashed #e5e7eb;border-radius:8px;padding:32px;text-align:center;cursor:pointer;color:#9ca3af;font-size:13px;margin-bottom:16px;" onclick="showToast('请选择图片文件')">
+        📁 点击或拖拽上传图片（JPG/PNG/WEBP）
+      </div>
+      <div style="background:#f9fafb;border-radius:8px;padding:16px;border:1px solid #e5e7eb;">
+        <div style="font-size:12px;color:#6b7280;margin-bottom:10px;font-weight:600;">AI 输出预览</div>
+        <pre style="font-size:11px;color:#374151;line-height:1.6;overflow-x:auto;">{
+  "tags": [
+    {"category": "车型", "value": "全新探岳L", "confidence": 0.92},
+    {"category": "商品亮点", "value": "外观", "confidence": 0.88},
+    {"category": "内容来源", "value": "官方发布", "confidence": 0.95}
+  ],
+  "suggested_name": "探岳L_外观_官方发布_20260330",
+  "reasoning": "图片显示全新探岳L车型（加长版），前脸外观展示，品牌官方拍摄风格"
+}</pre>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('testModal').classList.remove('show')">关闭</button>
+      <button class="btn btn-primary" onclick="showToast('正在调用豆包 API...');setTimeout(()=>showToast('✓ 测试完成，结果已刷新'),1500)">▶ 运行测试</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tag Definition Modal -->
+<div class="modal-overlay" id="defModal">
+  <div class="modal" style="width:500px;">
+    <div class="modal-header">
+      <div class="modal-title" id="defModalTitle">编辑说明</div>
+      <button class="modal-close" onclick="document.getElementById('defModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+        <span style="font-size:12px;color:#6b7280;">标签</span>
+        <span style="font-size:14px;font-weight:600;color:#374151;" id="defModalTagName"></span>
+        <span style="font-size:11px;color:#9ca3af;margin-left:4px;" id="defModalCatName"></span>
+      </div>
+      <div style="margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:500;color:#374151;margin-bottom:4px;">说明 / 识别要点 <span style="font-size:11px;color:#9ca3af;font-weight:400;">（可选，帮助模型更准确识别此标签）</span></div>
+        <textarea id="defModalInput" style="width:100%;min-height:110px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;color:#1a1a2e;font-family:inherit;line-height:1.6;resize:vertical;outline:none;transition:border-color 0.15s;" placeholder="描述 AI 识别此标签的特征，例如&#10;· 外观特点（贯穿式尾灯、流线型车身…）&#10;· 触发场景（车展全景、官方海报…）&#10;· 关键词（包含"B9"字样、出现品牌Logo…）"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="defClearBtn" onclick="clearDef()" style="margin-right:auto;">清除说明</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('defModal').classList.remove('show')">取消</button>
+      <button class="btn btn-primary" onclick="saveDef()">保存说明</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Category Confirm Modal -->
+<div class="modal-overlay" id="deleteCatModal" onclick="if(event.target===this)closeDeleteCatModal()">
+  <div class="modal" style="width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">删除分类</div>
+      <button class="modal-close" onclick="closeDeleteCatModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:12px;align-items:flex-start;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">🗑</div>
+        <div>
+          <div style="font-size:14px;font-weight:500;color:#1a1a2e;margin-bottom:6px;">确认删除「<span id="deleteCatNameLabel" style="color:#dc2626;"></span>」？</div>
+          <div style="font-size:13px;color:#6b7280;line-height:1.6;">该分类下的所有标签将一并删除，此操作不可撤销。</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeDeleteCatModal()">取消</button>
+      <button class="btn" style="background:#dc2626;color:#fff;border:none;" onclick="confirmDeleteCategory()">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Tag Modal -->
+<div class="modal-overlay" id="addTagModal">
+  <div class="modal" style="width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">添加标签 — <span id="addTagCatName" style="color:#667eea;"></span></div>
+      <button class="modal-close" onclick="document.getElementById('addTagModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <div class="form-label">标签名称 <span style="color:#dc2626;font-size:11px;">*</span></div>
+        <input class="form-input" id="addTagName" placeholder="如：全新ID.3" maxlength="40" oninput="updateAddTagPreview()">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <div class="form-label">识别说明 <span class="tip">（可选，帮助模型更准确识别）</span></div>
+        <textarea class="prompt-editor" id="addTagDef" style="min-height:80px;" placeholder="描述 AI 识别此标签的特征，如外观特点、出现场景、关键词等"></textarea>
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:12px;color:#9ca3af;">预览：</span>
+        <span id="addTagPreview" style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;background:#f3f4f6;border-radius:6px;border:1px solid #e5e7eb;font-size:12px;color:#374151;">标签名</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('addTagModal').classList.remove('show')">取消</button>
+      <button class="btn btn-primary" onclick="addTag()">添加标签</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Category Modal -->
+<div class="modal-overlay" id="addCatModal">
+  <div class="modal" style="width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">新增分类</div>
+      <button class="modal-close" onclick="document.getElementById('addCatModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:0;">
+        <div class="form-label">分类名称 <span style="color:#dc2626;font-size:11px;">*</span></div>
+        <input class="form-input" id="addCatName" placeholder="如：使用场景" maxlength="20">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('addCatModal').classList.remove('show')">取消</button>
+      <button class="btn btn-primary" onclick="addCategory()">创建分类</button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Schema Modal -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">⬆ 导入 Schema JSON</div>
+      <button class="modal-close" onclick="document.getElementById('importModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:16px;display:flex;gap:8px;">
+        <span>⚠️</span>
+        <span>导入将<strong>合并</strong>到现有 Schema，相同分类名称的标签会追加，不会删除已有数据。</span>
+      </div>
+      <div class="form-group">
+        <div class="form-label" style="margin-bottom:8px;">JSON 格式示例</div>
+        <pre style="background:#1e1e2e;color:#cdd6f4;padding:14px;border-radius:8px;font-size:11px;line-height:1.7;overflow-x:auto;font-family:'Menlo','Monaco','Consolas',monospace;margin:0;">{
+  "categories": [
+    {
+      "category": "分类名称",
+      "tags": [
+        {
+          "value": "标签名",
+          "definition": "标签说明（可选）"
+        },
+        {
+          "value": "另一个标签"
+        }
+      ]
+    },
+    {
+      "category": "第二个分类",
+      "tags": [
+        { "value": "标签A", "definition": "说明文字" }
+      ]
+    }
+  ]
+}</pre>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <div class="form-label">粘贴 JSON 内容</div>
+        <textarea class="prompt-editor" id="importJsonInput" style="min-height:120px;font-family:'Menlo','Monaco','Consolas',monospace;font-size:12px;" placeholder='{"categories": [...]}' oninput="validateImportJson()"></textarea>
+        <div id="importJsonError" style="font-size:12px;color:#dc2626;margin-top:4px;display:none;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('importModal').classList.remove('show')">取消</button>
+      <button class="btn btn-primary" id="importConfirmBtn" onclick="importSchema()">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- Select Tenant Modal -->
+<div class="modal-overlay" id="selectTenantModal" onclick="if(event.target===this)closeTenantModal()">
+  <div class="modal" style="width:360px;overflow:visible;">
+    <div class="modal-header">
+      <div class="modal-title">添加企业</div>
+      <button class="modal-close" onclick="closeTenantModal()">×</button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px 20px;">
+      <div class="form-label" style="margin-bottom:6px;">选择企业</div>
+      <div class="combobox-wrap">
+        <input class="combobox-input" id="tenantComboInput" placeholder="搜索或选择企业名称…"
+               oninput="onTenantInput(this.value)"
+               onfocus="openTenantDropdown()"
+               autocomplete="off" readonly>
+        <span class="combobox-arrow" id="comboArrow">▾</span>
+        <div class="combobox-dropdown" id="tenantDropdown"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeTenantModal()">取消</button>
+      <button class="btn btn-primary" id="confirmSelectBtn" onclick="confirmSelectTenant()" disabled style="opacity:0.5;cursor:not-allowed;">确认添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<!-- Version Compare Modal -->
+<div class="modal-overlay" id="compareModal" onclick="if(event.target===this)closeCompareModal()">
+  <div class="modal compare-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="compareModalTitle">版本对比</div>
+      <button class="modal-close" onclick="closeCompareModal()">×</button>
+    </div>
+    <div class="compare-header-bar">
+      <div class="compare-version-select">
+        <label>对比版本</label>
+        <select id="compareVersionA" onchange="renderCompare()"></select>
+      </div>
+      <div class="compare-vs">vs</div>
+      <div class="compare-version-label">
+        <span style="color:#059669;">●</span>
+        <span id="compareVersionBLabel">v1.2.0（当前）</span>
+      </div>
+    </div>
+    <div class="compare-body" id="compareBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeCompareModal()">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Version Detail Modal -->
+<div class="modal-overlay" id="versionDetailModal" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header">
+      <div class="modal-title" id="versionDetailTitle">版本详情</div>
+      <button class="modal-close" onclick="document.getElementById('versionDetailModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body" id="versionDetailBody" style="max-height:60vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="document.getElementById('versionDetailModal').classList.remove('show')">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- Required Tags Modal -->
+<div class="modal-overlay" id="reqRulesModal" onclick="if(event.target===this)closeReqModal()">
+  <div class="modal" style="width:520px;">
+    <div class="modal-header">
+      <div class="modal-title">⚡ 配置关联必打标签 — <span id="reqModalTagName" style="color:#f59e0b;font-weight:600;"></span></div>
+      <button class="modal-close" onclick="closeReqModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:16px;display:flex;gap:8px;align-items:flex-start;">
+        <span style="font-size:14px;flex-shrink:0;">⚡</span>
+        <span>当 AI 识别到此标签时，以下标签将<strong>强制同时打上</strong>，确保打标结果的完整性与一致性</span>
+      </div>
+      <!-- Current rules list -->
+      <div id="reqRulesList" style="margin-bottom:4px;"></div>
+      <!-- Add new rule -->
+      <div style="border-top:1px solid #f3f4f6;padding-top:16px;margin-top:12px;">
+        <div style="font-size:13px;font-weight:500;color:#374151;margin-bottom:8px;">添加关联规则</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select id="reqCatSelect" class="form-input" style="flex:1;font-size:13px;" onchange="updateReqTagSelect()"></select>
+          <span style="color:#9ca3af;font-size:12px;flex-shrink:0;">›</span>
+          <select id="reqTagSelect" class="form-input" style="flex:1;font-size:13px;"></select>
+          <button class="btn btn-primary" style="white-space:nowrap;padding:8px 14px;" onclick="addReqRule()">+ 添加</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeReqModal()">完成</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <span class="toast-icon">✓</span>
+  <span id="toastMsg"></span>
+</div>
+
+<script>
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// --- 读取当前两个 toggle 状态并同步左侧企业列表 meta ---
+function syncTenantMeta() {
+  const tagging = document.getElementById('taggingToggle').checked;
+  const naming  = document.getElementById('namingToggle').checked;
+  const activeMeta = document.querySelector('.tenant-item.active .meta');
+  if (!activeMeta) return;
+  const version = (activeMeta.textContent.match(/v[\d.]+/) || [''])[0];
+  let label;
+  if (tagging && naming)       label = '打标✓ 命名✓';
+  else if (tagging && !naming) label = '仅打标';
+  else if (!tagging && naming) label = '仅命名';
+  else                          label = '全部关闭';
+  const dotOff = (!tagging && !naming) ? ' off' : '';
+  activeMeta.innerHTML = `<div class="status-dot${dotOff}"></div>${label} · ${version}`;
+}
+
+function toggleTagging(checkbox) {
+  const enabled = checkbox.checked;
+  if (!enabled) {
+    if (!confirm('确认关闭 AI 打标？\n关闭后新上传文件将不再自动生成标签，AI 命名功能不受影响。')) {
+      checkbox.checked = true;
+      return;
+    }
+  }
+  applyFeatureState('tagging', enabled);
+}
+
+function toggleNaming(checkbox) {
+  const enabled = checkbox.checked;
+  if (!enabled) {
+    if (!confirm('确认关闭 AI 命名？\n关闭后新上传文件将不再自动生成建议文件名，AI 打标功能不受影响。')) {
+      checkbox.checked = true;
+      return;
+    }
+  }
+  applyFeatureState('naming', enabled);
+}
+
+function enableFeature(type) {
+  document.getElementById(type + 'Toggle').checked = true;
+  applyFeatureState(type, true);
+}
+
+function applyFeatureState(type, enabled) {
+  // 更新 Tab 内的 toggle 状态文字
+  const statusEl = document.getElementById(type + 'StatusText');
+  if (statusEl) {
+    statusEl.textContent = enabled ? '已启用' : '已关闭';
+    statusEl.className = 'feature-status-text ' + (enabled ? 'on' : 'off');
+  }
+  // 显示/隐藏配置区 vs 空状态卡片
+  const configEl   = document.getElementById(type + 'Config');
+  const offStateEl = document.getElementById(type + 'OffState');
+  if (configEl)   configEl.style.display   = enabled ? '' : 'none';
+  if (offStateEl) offStateEl.style.display = enabled ? 'none' : 'flex';
+  // 更新 header badge
+  const badge = document.getElementById('badge' + type.charAt(0).toUpperCase() + type.slice(1));
+  if (badge) {
+    const labelMap = { tagging: '打标', naming: '命名' };
+    badge.textContent = enabled ? '✓ ' + labelMap[type] : '● ' + labelMap[type];
+    badge.className = 'badge ' + (enabled ? 'badge-green' : 'badge-gray');
+  }
+  syncTenantMeta();
+  showToast(enabled
+    ? '✓ AI ' + (type === 'tagging' ? '打标' : '命名') + ' 已启用'
+    : '⚠ AI ' + (type === 'tagging' ? '打标' : '命名') + ' 已关闭'
+  );
+}
+
+function selectTenant(el, id) {
+  document.querySelectorAll('.tenant-item').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const names = { faw_vw: '一汽大众', changan: '长安汽车', byd: '比亚迪', nio: '蔚来汽车' };
+  if (id === 'byd' || id === 'nio') {
+    showToast(names[id] + ' 暂未配置 Prompt，请先联系管理员');
+  } else {
+    showToast('已切换至 ' + names[id]);
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ─── Version Data ───
+const CURRENT_VERSION = 'v1.2.0';
+const VERSION_DATA = {
+  'v1.2.0': {
+    label: 'v1.2.0（当前）',
+    taggingPrompt: '你是一个专业的媒体素材分析助手，服务于{{tenant_name}}。\n\n## 你的任务\n分析媒体文件，严格从标签知识库中选取合适的标签。\n\n## 输出要求\n- 仅使用知识库中存在的标签值，禁止自行发明新标签\n- 日期使用 {{today_date}}\n- 文件类型：{{file_type}}\n- 输出为严格 JSON 格式',
+    namingPrompt: '根据已识别的标签，生成标准化文件名。\n\n## 命名规则\n{{naming_rules}}\n\n## 要求\n- 禁止使用空格和特殊字符\n- 文件名长度不超过 80 字符\n- 序号格式：3位补零（如 001）',
+    schemaTags: ['全新探岳L','探岳','探岳X','迈腾B9','迈腾B8','ID.7 VIZZION','ID.6 CROZZ','ID.4 CROZZ','ID.纯享版','全新速腾L'],
+    summary: '新增 ID.纯享版、全新速腾L 车型标签；命名格式新增 [序号] 字段'
+  },
+  'v1.1.4': {
+    label: 'v1.1.4',
+    taggingPrompt: '你是一个专业的媒体素材分析助手，服务于{{tenant_name}}。\n\n## 你的任务\n分析媒体文件，严格从标签知识库中选取合适的标签。\n\n## 输出要求\n- 仅使用知识库中存在的标签值，禁止自行发明新标签\n- 日期使用 {{today_date}}\n- 文件类型：{{file_type}}\n- 输出为严格 JSON 格式',
+    namingPrompt: '根据已识别的标签，生成标准化文件名。\n\n## 命名规则\n{{naming_rules}}\n\n## 要求\n- 禁止使用空格和特殊字符\n- 文件名长度不超过 80 字符',
+    schemaTags: ['全新探岳L','探岳','探岳X','迈腾B9','迈腾B8','ID.7 VIZZION','ID.6 CROZZ','ID.4 CROZZ'],
+    summary: '命名 Prompt：调整文件名长度上限为 80 字符，强调禁止空格/特殊字符'
+  },
+  'v1.1.3': {
+    label: 'v1.1.3',
+    taggingPrompt: '你是一个专业的媒体素材分析助手，服务于{{tenant_name}}。\n\n## 你的任务\n分析媒体文件，严格从标签知识库中选取合适的标签。\n\n## 输出要求\n- 仅使用知识库中存在的标签值，禁止自行发明新标签\n- 日期使用 {{today_date}}\n- 文件类型：{{file_type}}\n- 输出为严格 JSON 格式',
+    namingPrompt: '根据已识别的标签，生成标准化文件名。\n\n## 命名规则\n{{naming_rules}}',
+    schemaTags: ['全新探岳L','探岳','探岳X','迈腾B9','迈腾B8','ID.7 VIZZION','ID.6 CROZZ','ID.4 CROZZ'],
+    summary: '首次配置命名 Prompt 及格式规则，默认格式 [车型]_[核心标签]_[内容来源]_[日期]'
+  },
+  'v1.1.2': {
+    label: 'v1.1.2',
+    taggingPrompt: '你是一个专业的媒体素材分析助手，服务于{{tenant_name}}。\n\n## 你的任务\n分析媒体文件，严格从标签知识库中选取合适的标签。\n\n## 输出要求\n- 仅使用知识库中存在的标签值，禁止自行发明新标签\n- 日期使用 {{today_date}}\n- 文件类型：{{file_type}}\n- 输出为严格 JSON 格式',
+    namingPrompt: null,
+    schemaTags: ['全新探岳L','探岳','探岳X','迈腾B9','迈腾B8','ID.7 VIZZION','ID.6 CROZZ','ID.4 CROZZ'],
+    summary: '修正「品牌历史」标签定义，补充 1937 年创始年份描述'
+  },
+  'v1.1.1': {
+    label: 'v1.1.1',
+    taggingPrompt: '你是一个专业的媒体素材分析助手，服务于{{tenant_name}}。\n\n## 你的任务\n分析媒体文件，严格从标签知识库中选取合适的标签。\n\n## 输出要求\n- 仅使用知识库中存在的标签值\n- 日期使用 {{today_date}}\n- 文件类型：{{file_type}}\n- 输出为严格 JSON 格式',
+    namingPrompt: null,
+    schemaTags: ['全新探岳L','探岳','探岳X','迈腾B9','迈腾B8','ID.7 VIZZION','ID.6 CROZZ','ID.4 CROZZ'],
+    summary: '打标 Prompt：增加「禁止自行发明新标签」强调语'
+  },
+  'v1.1.0': {
+    label: 'v1.1.0',
+    taggingPrompt: '你是一个专业的媒体素材分析助手，服务于{{tenant_name}}。\n\n## 你的任务\n分析媒体文件，严格从标签知识库中选取合适的标签。\n\n## 输出要求\n- 仅使用知识库中存在的标签值\n- 日期使用 {{today_date}}\n- 文件类型：{{file_type}}\n- 输出为严格 JSON 格式',
+    namingPrompt: null,
+    schemaTags: ['全新探岳L','探岳','探岳X','迈腾B9','迈腾B8','ID.7 VIZZION','ID.6 CROZZ','ID.4 CROZZ'],
+    summary: '新增「对比内容」分类，增加 10 个竞品品牌标签（上汽大众、一汽奥迪等）'
+  },
+  'v1.0.0': {
+    label: 'v1.0.0',
+    taggingPrompt: '你是一个专业的媒体素材分析助手，服务于{{tenant_name}}。\n\n## 你的任务\n分析媒体文件，从标签知识库中选取合适的标签。\n\n## 输出要求\n- 日期使用 {{today_date}}\n- 文件类型：{{file_type}}\n- 输出为 JSON 格式',
+    namingPrompt: null,
+    schemaTags: ['全新探岳L','探岳','探岳X','迈腾B9','迈腾B8','ID.7 VIZZION','ID.6 CROZZ','ID.4 CROZZ'],
+    summary: '初始版本，配置打标 Prompt 及 7 个标签分类（50 个标签）'
+  }
+};
+
+// ─── Compare Modal ───
+let _compareModule = 'tagging';
+
+function openCompareModal(fromVersion, module) {
+  _compareModule = module || 'tagging';
+  const moduleLabel = _compareModule === 'tagging' ? 'AI 打标' : 'AI 命名';
+  document.getElementById('compareModalTitle').textContent = `版本对比 — ${moduleLabel}`;
+  const current = VERSION_DATA[CURRENT_VERSION];
+  const sel = document.getElementById('compareVersionA');
+  sel.innerHTML = '';
+  Object.entries(VERSION_DATA).filter(([v]) => v !== CURRENT_VERSION).forEach(([v, d]) => {
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = d.label;
+    if (v === fromVersion) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  document.getElementById('compareVersionBLabel').textContent = current.label;
+  document.getElementById('compareModal').classList.add('show');
+  renderCompare();
+}
+
+function closeCompareModal() {
+  document.getElementById('compareModal').classList.remove('show');
+}
+
+function renderCompare() {
+  const vA = document.getElementById('compareVersionA').value;
+  const dataA = VERSION_DATA[vA];
+  const dataB = VERSION_DATA[CURRENT_VERSION];
+  if (!dataA || !dataB) return;
+
+  const body = document.getElementById('compareBody');
+  let html = '';
+
+  if (_compareModule === 'tagging') {
+    // ─ Tagging Prompt diff ─
+    const tpSame = dataA.taggingPrompt === dataB.taggingPrompt;
+    html += `<div class="diff-section">
+      <div class="diff-section-title">AI 打标 Prompt ${tpSame ? '<span style="font-size:11px;color:#9ca3af;font-weight:400;">无变更</span>' : '<span style="font-size:11px;color:#f59e0b;font-weight:400;">有变更</span>'}</div>
+      <div class="diff-cols">
+        <div class="diff-col">
+          <div class="diff-col-label">${dataA.label}</div>
+          <div class="diff-text">${renderTextDiff(dataA.taggingPrompt, dataB.taggingPrompt, 'old')}</div>
+        </div>
+        <div class="diff-col">
+          <div class="diff-col-label">${dataB.label}</div>
+          <div class="diff-text">${renderTextDiff(dataA.taggingPrompt, dataB.taggingPrompt, 'new')}</div>
+        </div>
+      </div>
+    </div>`;
+
+    // ─ Schema tags diff ─
+    const tagsA = new Set(dataA.schemaTags);
+    const tagsB = new Set(dataB.schemaTags);
+    const added = dataB.schemaTags.filter(t => !tagsA.has(t));
+    const removed = dataA.schemaTags.filter(t => !tagsB.has(t));
+    html += `<div class="diff-section">
+      <div class="diff-section-title">标签 Schema 变化
+        ${added.length ? `<span class="diff-badge diff-add" style="margin-left:8px;">+${added.length}</span>` : ''}
+        ${removed.length ? `<span class="diff-badge diff-del" style="margin-left:4px;">-${removed.length}</span>` : ''}
+        ${!added.length && !removed.length ? '<span style="font-size:11px;color:#9ca3af;font-weight:400;">无变更</span>' : ''}
+      </div>
+      <div class="diff-tags-grid">
+        ${removed.map(t => `<span class="diff-tag-chip diff-tag-removed">− ${escHtml(t)}</span>`).join('')}
+        ${added.map(t => `<span class="diff-tag-chip diff-tag-added">+ ${escHtml(t)}</span>`).join('')}
+        ${!added.length && !removed.length ? '<span style="font-size:12px;color:#9ca3af;padding:4px;">与当前版本标签完全一致</span>' : ''}
+      </div>
+    </div>`;
+
+  } else {
+    // ─ Naming Prompt diff ─
+    const npA = dataA.namingPrompt;
+    const npB = dataB.namingPrompt;
+    const npSame = npA === npB;
+    html += `<div class="diff-section">
+      <div class="diff-section-title">AI 命名 Prompt ${npSame ? '<span style="font-size:11px;color:#9ca3af;font-weight:400;">无变更</span>' : '<span style="font-size:11px;color:#f59e0b;font-weight:400;">有变更</span>'}</div>
+      <div class="diff-cols">
+        <div class="diff-col">
+          <div class="diff-col-label">${dataA.label}</div>
+          ${npA ? `<div class="diff-text">${renderTextDiff(npA, npB || '', 'old')}</div>` : '<div class="diff-empty" style="padding:12px 14px;font-size:12px;color:#9ca3af;">本版本未配置 AI 命名</div>'}
+        </div>
+        <div class="diff-col">
+          <div class="diff-col-label">${dataB.label}</div>
+          ${npB ? `<div class="diff-text">${renderTextDiff(npA || '', npB, 'new')}</div>` : '<div class="diff-empty" style="padding:12px 14px;font-size:12px;color:#9ca3af;">本版本未配置 AI 命名</div>'}
+        </div>
+      </div>
+    </div>`;
+  }
+
+  body.innerHTML = html;
+}
+
+function renderTextDiff(oldText, newText, side) {
+  if (oldText === newText) return escHtml(oldText);
+  const oldLines = oldText.split('\n');
+  const newLines = newText.split('\n');
+  if (side === 'old') {
+    return oldLines.map(line => {
+      const cls = newLines.includes(line) ? '' : ' class="diff-del"';
+      return `<span${cls}>${escHtml(line)}</span>`;
+    }).join('\n');
+  } else {
+    return newLines.map(line => {
+      const cls = oldLines.includes(line) ? '' : ' class="diff-add"';
+      return `<span${cls}>${escHtml(line)}</span>`;
+    }).join('\n');
+  }
+}
+
+// ─── Version Detail Modal ───
+function openVersionDetail(v, module) {
+  const data = VERSION_DATA[v];
+  if (!data) return;
+  const moduleLabel = module === 'naming' ? 'AI 命名' : 'AI 打标';
+  document.getElementById('versionDetailTitle').textContent = `版本详情 — ${data.label} · ${moduleLabel}`;
+  let html = `<div style="background:#f9fafb;border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;color:#374151;border:1px solid #e5e7eb;">
+    <span style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">变更说明</span>
+    <div style="margin-top:5px;">${escHtml(data.summary)}</div>
+  </div>`;
+  if (module === 'naming') {
+    if (data.namingPrompt) {
+      html += `<div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">AI 命名 Prompt</div>
+      <pre style="background:#1e1e2e;color:#cdd6f4;padding:14px;border-radius:8px;font-size:11px;line-height:1.7;overflow-x:auto;font-family:'Menlo','Monaco','Consolas',monospace;margin:0 0 14px;white-space:pre-wrap;">${escHtml(data.namingPrompt)}</pre>`;
+    } else {
+      html += `<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px;border:1px dashed #e5e7eb;border-radius:8px;">本版本未配置 AI 命名 Prompt</div>`;
+    }
+  } else {
+    html += `<div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;">AI 打标 Prompt</div>
+    <pre style="background:#1e1e2e;color:#cdd6f4;padding:14px;border-radius:8px;font-size:11px;line-height:1.7;overflow-x:auto;font-family:'Menlo','Monaco','Consolas',monospace;margin:0 0 14px;white-space:pre-wrap;">${escHtml(data.taggingPrompt)}</pre>`;
+    html += `<div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:8px;">本版本标签（车型分类，共 ${data.schemaTags.length} 个）</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">${data.schemaTags.map(t => `<span style="display:inline-flex;padding:4px 9px;background:#ede9fe;color:#5b21b6;border-radius:5px;font-size:12px;font-weight:500;">${escHtml(t)}</span>`).join('')}</div>`;
+  }
+  document.getElementById('versionDetailBody').innerHTML = html;
+  document.getElementById('versionDetailModal').classList.add('show');
+}
+
+// ─── Usage refresh (demo) ───
+function refreshUsage() {
+  const from = document.getElementById('usageDateFrom').value;
+  const to = document.getElementById('usageDateTo').value;
+  if (from && to) showToast(`已查询 ${from} 至 ${to} 的消耗数据`);
+}
+
+function saveVersion() {
+  document.getElementById('saveModal').classList.remove('show');
+  showToast('✓ v1.2.1 已保存并生效');
+  // Update save bar
+  document.querySelector('.dot-unsaved').classList.add('saved');
+  document.querySelector('.save-bar-hint').innerHTML = '<div class="dot-unsaved saved"></div> 已保存 · v1.2.1';
+}
+
+function addCarModel() {
+  const input = document.getElementById('newCarModel');
+  const val = input.value.trim();
+  if (!val) { showToast('请输入车型名称'); return; }
+  showToast('已添加车型：' + val);
+  input.value = '';
+}
+
+
+// --- Tag Definition ---
+let _currentDefTag = null;
+
+function openDefModal(btn) {
+  const tag = btn.closest('.schema-tag');
+  _currentDefTag = tag;
+  const name = tag.dataset.name;
+  const def = tag.dataset.def || '';
+  const hasDef = tag.classList.contains('has-def');
+  // Find category name from the closest category-head
+  const catHead = tag.closest('.category-block').querySelector('.category-name');
+  const catText = catHead ? catHead.childNodes[0].textContent.trim() : '';
+
+  document.getElementById('defModalTitle').textContent = hasDef ? '编辑说明 — ' + name : '添加说明 — ' + name;
+  document.getElementById('defModalTagName').textContent = name;
+  document.getElementById('defModalCatName').textContent = catText ? '（' + catText + '）' : '';
+  document.getElementById('defModalInput').value = def;
+  // Show/hide clear button
+  document.getElementById('defClearBtn').style.display = def ? 'flex' : 'none';
+  document.getElementById('defModal').classList.add('show');
+  setTimeout(() => document.getElementById('defModalInput').focus(), 100);
+}
+
+function saveDef() {
+  const val = document.getElementById('defModalInput').value.trim();
+  const tag = _currentDefTag;
+  if (!tag) return;
+  tag.dataset.def = val;
+  if (val) {
+    tag.classList.add('has-def');
+    // Rebuild dot-wrap
+    let dotWrap = tag.querySelector('.def-dot-wrap');
+    if (!dotWrap) {
+      dotWrap = document.createElement('span');
+      dotWrap.className = 'def-dot-wrap';
+      tag.querySelector('.tag-name').after(dotWrap);
+    }
+    dotWrap.innerHTML = '<span class="def-dot"></span><span class="def-tip">' + escHtml(val) + '</span>';
+    // Update edit button text
+    const editBtn = tag.querySelector('.tag-edit-def');
+    if (editBtn) editBtn.textContent = '✎';
+  } else {
+    tag.classList.remove('has-def');
+    const dotWrap = tag.querySelector('.def-dot-wrap');
+    if (dotWrap) dotWrap.remove();
+    const editBtn = tag.querySelector('.tag-edit-def');
+    if (editBtn) editBtn.textContent = '+ 说明';
+  }
+  document.getElementById('defModal').classList.remove('show');
+  showToast(val ? '✓ 说明已保存' : '说明已清除');
+}
+
+function clearDef() {
+  document.getElementById('defModalInput').value = '';
+  saveDef();
+}
+
+function delTag(btn, name) {
+  const chip = btn.closest('.schema-tag');
+  chip.style.opacity = '0';
+  chip.style.transform = 'scale(0.85)';
+  chip.style.transition = 'all 0.18s';
+  setTimeout(() => chip.remove(), 180);
+  showToast('已删除标签：' + name);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close def modal on overlay click
+document.getElementById('defModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.remove('show');
+});
+
+// --- Naming Rules ---
+function insertNamingField(field) {
+  const input = document.getElementById('namingFormat');
+  const pos = input.selectionStart;
+  const val = input.value;
+  input.value = val.slice(0, pos) + field + val.slice(input.selectionEnd);
+  input.focus();
+  input.setSelectionRange(pos + field.length, pos + field.length);
+  updateNamingPreview();
+}
+
+function updateNamingPreview() {
+  const fmt = document.getElementById('namingFormat').value.trim();
+  const rules = document.getElementById('namingRulesEditor').value.trim();
+  let preview = fmt ? '命名格式：' + fmt : '';
+  if (rules) {
+    const lines = rules.split('\n').filter(l => l.trim());
+    preview += (preview ? '\n\n补充规则：\n' : '') + lines.map(l => l.trim().startsWith('·') ? l : '· ' + l).join('\n');
+  }
+  document.getElementById('namingPreview').textContent = preview || '（暂无规则）';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const fmt = document.getElementById('namingFormat');
+  const rules = document.getElementById('namingRulesEditor');
+  if (fmt) fmt.addEventListener('input', updateNamingPreview);
+  if (rules) rules.addEventListener('input', updateNamingPreview);
+});
+
+
+// --- Add Tag Modal ---
+let _addTagTargetBlock = null;
+
+function openAddTagModal(categoryBlock) {
+  _addTagTargetBlock = categoryBlock;
+  const catName = categoryBlock.dataset.cat || '未知分类';
+  document.getElementById('addTagCatName').textContent = catName;
+  document.getElementById('addTagName').value = '';
+  document.getElementById('addTagDef').value = '';
+  document.getElementById('addTagPreview').innerHTML = '<span style="color:#9ca3af;">标签名</span>';
+  document.getElementById('addTagModal').classList.add('show');
+  setTimeout(() => document.getElementById('addTagName').focus(), 100);
+}
+
+function updateAddTagPreview() {
+  const name = document.getElementById('addTagName').value.trim();
+  const preview = document.getElementById('addTagPreview');
+  if (name) {
+    preview.innerHTML = escHtml(name) + '<span class="def-dot-wrap" style="margin-left:4px;"><span class="def-dot" style="opacity:0.3;"></span></span>';
+    preview.style.color = '#374151';
+  } else {
+    preview.innerHTML = '<span style="color:#9ca3af;">标签名</span>';
+  }
+}
+
+function addTag() {
+  const name = document.getElementById('addTagName').value.trim();
+  if (!name) { showToast('请输入标签名称'); document.getElementById('addTagName').focus(); return; }
+  const def = document.getElementById('addTagDef').value.trim();
+  const block = _addTagTargetBlock;
+  if (!block) return;
+
+  const tagsContainer = block.querySelector('.category-tags');
+  // Clear placeholder if this is a fresh empty category
+  const emptyHint = tagsContainer.querySelector('.tags-empty-hint');
+  if (emptyHint) emptyHint.remove();
+
+  const chip = document.createElement('div');
+  chip.className = 'schema-tag' + (def ? ' has-def' : '');
+  chip.dataset.name = name;
+  chip.dataset.def = def;
+
+  let dotHtml = def
+    ? `<span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">${escHtml(def)}</span></span>`
+    : '';
+  let editLabel = def ? '✎' : '+ 说明';
+  chip.innerHTML = `<span class="tag-name">${escHtml(name)}</span>${dotHtml}<span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">${editLabel}</span><span class="tag-del" onclick="delTag(this,'${escHtml(name)}')">×</span></span>`;
+
+  // Animate in
+  chip.style.opacity = '0';
+  chip.style.transform = 'scale(0.85)';
+  tagsContainer.appendChild(chip);
+  requestAnimationFrame(() => {
+    chip.style.transition = 'all 0.18s';
+    chip.style.opacity = '1';
+    chip.style.transform = 'scale(1)';
+  });
+  addReqBtnToTag(chip);
+
+  // Update badge count
+  const badge = block.querySelector('.category-name .badge');
+  if (badge) {
+    const cur = parseInt(badge.textContent) || 0;
+    badge.textContent = (cur + 1) + ' 个标签';
+  }
+
+  document.getElementById('addTagModal').classList.remove('show');
+  showToast('✓ 已添加标签：' + name);
+}
+
+// --- Delete Category ---
+let _deleteCatTargetBlock = null;
+
+function openDeleteCatConfirm(block) {
+  _deleteCatTargetBlock = block;
+  const name = block.dataset.cat || '此分类';
+  document.getElementById('deleteCatNameLabel').textContent = name;
+  document.getElementById('deleteCatModal').classList.add('show');
+}
+
+function closeDeleteCatModal() {
+  document.getElementById('deleteCatModal').classList.remove('show');
+  _deleteCatTargetBlock = null;
+}
+
+function confirmDeleteCategory() {
+  const block = _deleteCatTargetBlock;
+  if (!block) return;
+  const name = block.dataset.cat || '分类';
+  block.style.transition = 'all 0.2s ease';
+  block.style.opacity = '0';
+  block.style.transform = 'scale(0.97)';
+  setTimeout(() => {
+    block.remove();
+    const catCount = document.getElementById('catCount');
+    if (catCount) catCount.textContent = String(Math.max(0, parseInt(catCount.textContent || '1') - 1));
+  }, 200);
+  closeDeleteCatModal();
+  showToast('✓ 已删除分类：' + name);
+}
+
+// --- Add Category Modal ---
+function addCategory() {
+  const name = document.getElementById('addCatName').value.trim();
+  if (!name) { showToast('请输入分类名称'); document.getElementById('addCatName').focus(); return; }
+
+  const container = document.getElementById('schemaCategories');
+  const expandTip = container.querySelector('[onclick="showToast(\'展开更多分类\')"]')
+    || container.lastElementChild;
+
+  const block = document.createElement('div');
+  block.className = 'category-block';
+  block.dataset.cat = name;
+  block.innerHTML = `
+    <div class="category-head">
+      <div class="category-name">${escHtml(name)} <span class="badge badge-gray">0 个标签</span></div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
+        <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
+      </div>
+    </div>
+    <div class="category-tags"><span class="tags-empty-hint">暂无标签，点击「+ 添加标签」开始添加</span></div>
+  `;
+
+  if (expandTip && expandTip.style && expandTip.getAttribute('onclick')) {
+    container.insertBefore(block, expandTip);
+  } else {
+    container.appendChild(block);
+  }
+
+  const catCount = document.getElementById('catCount');
+  if (catCount) catCount.textContent = String(parseInt(catCount.textContent || '8') + 1);
+
+  document.getElementById('addCatName').value = '';
+  document.getElementById('addCatModal').classList.remove('show');
+  showToast('✓ 已创建分类：' + name);
+}
+
+// --- Import Schema ---
+function validateImportJson() {
+  const raw = document.getElementById('importJsonInput').value.trim();
+  const errEl = document.getElementById('importJsonError');
+  const btn = document.getElementById('importConfirmBtn');
+  if (!raw) { errEl.style.display = 'none'; btn.disabled = false; return; }
+  try {
+    const data = JSON.parse(raw);
+    if (!data.categories || !Array.isArray(data.categories)) throw new Error('缺少 categories 数组');
+    errEl.style.display = 'none';
+    btn.disabled = false;
+  } catch(e) {
+    errEl.textContent = '⚠ JSON 格式错误：' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = true;
+  }
+}
+
+function importSchema() {
+  const raw = document.getElementById('importJsonInput').value.trim();
+  if (!raw) { showToast('请先粘贴 JSON 内容'); return; }
+  let data;
+  try { data = JSON.parse(raw); } catch(e) { showToast('JSON 解析失败'); return; }
+
+  let addedCats = 0, addedTags = 0;
+  const container = document.getElementById('schemaCategories');
+  const expandTip = container.querySelector('div[onclick*="展开更多分类"]');
+
+  (data.categories || []).forEach(cat => {
+    if (!cat.category) return;
+    // Find or create category block
+    let block = container.querySelector(`.category-block[data-cat="${CSS.escape(cat.category)}"]`);
+    if (!block) {
+      block = document.createElement('div');
+      block.className = 'category-block';
+      block.dataset.cat = cat.category;
+      block.innerHTML = `
+        <div class="category-head">
+          <div class="category-name">${escHtml(cat.category)} <span class="badge badge-gray">0 个标签</span></div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
+            <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
+          </div>
+        </div>
+        <div class="category-tags"></div>
+      `;
+      expandTip ? container.insertBefore(block, expandTip) : container.appendChild(block);
+      const catCount = document.getElementById('catCount');
+      if (catCount) catCount.textContent = String(parseInt(catCount.textContent || '8') + 1);
+      addedCats++;
+    }
+    if (!block) return;
+
+    // Clear placeholder text if present
+    const tagsContainer = block.querySelector('.category-tags');
+    if (tagsContainer.children.length === 0 || tagsContainer.innerHTML.includes('暂无标签')) {
+      tagsContainer.innerHTML = '';
+    }
+
+    (cat.tags || []).forEach(t => {
+      if (!t.value) return;
+      // Skip duplicates
+      if (block.querySelector(`.schema-tag[data-name="${CSS.escape(t.value)}"]`)) return;
+      const chip = document.createElement('div');
+      const def = t.definition || '';
+      chip.className = 'schema-tag' + (def ? ' has-def' : '');
+      chip.dataset.name = t.value;
+      chip.dataset.def = def;
+      const dotHtml = def ? `<span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">${escHtml(def)}</span></span>` : '';
+      const editLabel = def ? '✎' : '+ 说明';
+      chip.innerHTML = `<span class="tag-name">${escHtml(t.value)}</span>${dotHtml}<span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">${editLabel}</span><span class="tag-del" onclick="delTag(this,'${escHtml(t.value)}')">×</span></span>`;
+      tagsContainer.appendChild(chip);
+      // Update badge
+      const badge = block.querySelector('.category-name .badge');
+      if (badge) badge.textContent = (parseInt(badge.textContent) + 1) + ' 个标签';
+      addedTags++;
+    });
+  });
+
+  document.getElementById('importJsonInput').value = '';
+  document.getElementById('importModal').classList.remove('show');
+  showToast(`✓ 导入完成：新增 ${addedCats} 个分类，${addedTags} 个标签`);
+}
+
+// --- History Filter ---
+function filterHistory(type, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#historyBody tr').forEach(row => {
+    const modules = row.dataset.module || '';
+    row.style.display = (type === 'all' || modules.includes(type)) ? '' : 'none';
+  });
+}
+
+// Close modals on overlay click
+['addTagModal','addCatModal','importModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) this.classList.remove('show');
+  });
+});
+
+// ─── Select Tenant Modal ───
+const AVAILABLE_TENANTS = [
+  { id:'lixiang',      name:'理想汽车',   initial:'理', color:'linear-gradient(135deg,#ef4444,#dc2626)', industry:'新能源汽车' },
+  { id:'xpeng',        name:'小鹏汽车',   initial:'小', color:'linear-gradient(135deg,#3b82f6,#2563eb)', industry:'新能源汽车' },
+  { id:'huawei_aito',  name:'华为问界',   initial:'华', color:'linear-gradient(135deg,#ef4444,#b91c1c)', industry:'新能源汽车' },
+  { id:'geely',        name:'吉利汽车',   initial:'吉', color:'linear-gradient(135deg,#f59e0b,#d97706)', industry:'自主品牌' },
+  { id:'saic_vw',      name:'上汽大众',   initial:'上', color:'linear-gradient(135deg,#6366f1,#4f46e5)', industry:'合资汽车' },
+  { id:'gac_toyota',   name:'广汽丰田',   initial:'广', color:'linear-gradient(135deg,#10b981,#059669)', industry:'合资汽车' },
+  { id:'dfac_nissan',  name:'东风日产',   initial:'东', color:'linear-gradient(135deg,#8b5cf6,#7c3aed)', industry:'合资汽车' },
+  { id:'haval',        name:'哈弗汽车',   initial:'哈', color:'linear-gradient(135deg,#06b6d4,#0891b2)', industry:'自主品牌' },
+];
+
+// Track which tenants are already added (by id)
+const addedTenantIds = new Set(['faw_vw','changan','byd','nio']);
+let selectedNewTenantId = null;
+
+function openSelectTenantModal() {
+  selectedNewTenantId = null;
+  const input = document.getElementById('tenantComboInput');
+  input.value = '';
+  input.readOnly = false;
+  updateConfirmBtn();
+  renderTenantDropdown('');
+  document.getElementById('selectTenantModal').classList.add('show');
+  setTimeout(() => input.focus(), 100);
+}
+
+function closeTenantModal() {
+  document.getElementById('selectTenantModal').classList.remove('show');
+  closeTenantDropdown();
+}
+
+function openTenantDropdown() {
+  renderTenantDropdown(document.getElementById('tenantComboInput').value);
+  document.getElementById('tenantDropdown').classList.add('show');
+  document.getElementById('comboArrow').classList.add('open');
+}
+
+function closeTenantDropdown() {
+  document.getElementById('tenantDropdown').classList.remove('show');
+  document.getElementById('comboArrow').classList.remove('open');
+}
+
+function onTenantInput(val) {
+  selectedNewTenantId = null;
+  updateConfirmBtn();
+  renderTenantDropdown(val);
+  document.getElementById('tenantDropdown').classList.add('show');
+}
+
+function renderTenantDropdown(keyword) {
+  const list = AVAILABLE_TENANTS.filter(t =>
+    !addedTenantIds.has(t.id) && t.name.includes(keyword.trim())
+  );
+  const dd = document.getElementById('tenantDropdown');
+  if (list.length === 0) {
+    dd.innerHTML = '<div class="combobox-empty">未找到匹配的企业</div>';
+  } else {
+    dd.innerHTML = list.map(t => `
+      <div class="combobox-option ${selectedNewTenantId === t.id ? 'selected' : ''}"
+           onclick="pickTenant('${t.id}','${t.name}')">
+        <span>${t.name}</span>
+        ${selectedNewTenantId === t.id ? '<span class="opt-check">✓</span>' : ''}
+      </div>`).join('');
+  }
+}
+
+function pickTenant(id, name) {
+  selectedNewTenantId = id;
+  document.getElementById('tenantComboInput').value = name;
+  closeTenantDropdown();
+  updateConfirmBtn();
+}
+
+function updateConfirmBtn() {
+  const btn = document.getElementById('confirmSelectBtn');
+  const has = !!selectedNewTenantId;
+  btn.disabled = !has;
+  btn.style.opacity = has ? '1' : '0.5';
+  btn.style.cursor  = has ? 'pointer' : 'not-allowed';
+}
+
+function confirmSelectTenant() {
+  if (!selectedNewTenantId) return;
+  const t = AVAILABLE_TENANTS.find(x => x.id === selectedNewTenantId);
+  if (!t) return;
+
+  const list = document.querySelector('.tenant-item').closest('.panel-card');
+  const newItem = document.createElement('div');
+  newItem.className = 'tenant-item';
+  newItem.setAttribute('onclick', `selectTenant(this,'${t.id}')`);
+  newItem.innerHTML = `
+    <div class="tenant-avatar" style="background:${t.color}">${t.initial}</div>
+    <div class="tenant-info">
+      <div class="name">${t.name}</div>
+      <div class="meta"><div class="status-dot off"></div>未启用 · 待配置</div>
+    </div>`;
+  newItem.style.opacity = '0';
+  newItem.style.transform = 'translateX(-8px)';
+  list.appendChild(newItem);
+  requestAnimationFrame(() => {
+    newItem.style.transition = 'all 0.2s ease';
+    newItem.style.opacity = '1';
+    newItem.style.transform = 'translateX(0)';
+  });
+
+  addedTenantIds.add(t.id);
+  closeTenantModal();
+  showToast(`✓ 已添加企业：${t.name}`);
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  const wrap = document.querySelector('.combobox-wrap');
+  if (wrap && !wrap.contains(e.target)) closeTenantDropdown();
+});
+
+// ─── Required Tags Rules ───
+// { tagValue: [{cat, tag}, ...] }
+const requiredTagRules = {
+  '全新探岳L': [
+    { cat: '种草内容', tag: '旅游' },
+    { cat: '商品亮点', tag: '外观' }
+  ],
+  '迈腾B9': [
+    { cat: '商品亮点', tag: '外观' }
+  ],
+};
+
+let _currentReqTag = '';
+
+function initRequiredTagUI() {
+  document.querySelectorAll('.schema-tag').forEach(tagEl => addReqBtnToTag(tagEl));
+}
+
+function addReqBtnToTag(tagEl) {
+  const acts = tagEl.querySelector('.tag-acts');
+  if (!acts || tagEl.querySelector('.tag-req-btn')) return;
+  const delBtn = acts.querySelector('.tag-del');
+  const reqBtn = document.createElement('span');
+  reqBtn.className = 'tag-req-btn';
+  reqBtn.title = '配置关联必打标签';
+  reqBtn.textContent = '⚡';
+  reqBtn.onclick = () => openReqModal(tagEl);
+  acts.insertBefore(reqBtn, delBtn);
+  updateReqIndicator(tagEl);
+}
+
+function updateReqIndicator(tagEl) {
+  const name = tagEl.dataset.name;
+  const rules = requiredTagRules[name] || [];
+  // Remove existing req-dot-wrap
+  const existing = tagEl.querySelector('.req-dot-wrap');
+  if (existing) existing.remove();
+  if (rules.length > 0) {
+    const wrap = document.createElement('span');
+    wrap.className = 'req-dot-wrap';
+    wrap.innerHTML = `<span class="req-dot"></span><span class="req-dot-tip">已配置 ${rules.length} 个关联必打标签</span>`;
+    const defDotWrap = tagEl.querySelector('.def-dot-wrap');
+    const tagName = tagEl.querySelector('.tag-name');
+    if (defDotWrap) defDotWrap.after(wrap);
+    else tagName.after(wrap);
+  }
+}
+
+function getAdminSchemaOpts() {
+  const result = {};
+  document.querySelectorAll('.category-block').forEach(block => {
+    const cat = block.dataset.cat;
+    const tags = [...block.querySelectorAll('.schema-tag')].map(t => t.dataset.name).filter(Boolean);
+    if (cat && tags.length) result[cat] = tags;
+  });
+  return result;
+}
+
+function openReqModal(tagEl) {
+  _currentReqTag = tagEl.dataset.name;
+  document.getElementById('reqModalTagName').textContent = _currentReqTag;
+  // Populate category select from current schema
+  const opts = getAdminSchemaOpts();
+  const catSel = document.getElementById('reqCatSelect');
+  catSel.innerHTML = Object.keys(opts).map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join('');
+  updateReqTagSelect();
+  renderReqRulesList();
+  document.getElementById('reqRulesModal').classList.add('show');
+}
+
+function closeReqModal() {
+  document.getElementById('reqRulesModal').classList.remove('show');
+  // Refresh all indicators
+  document.querySelectorAll('.schema-tag').forEach(tagEl => updateReqIndicator(tagEl));
+}
+
+function updateReqTagSelect() {
+  const cat = document.getElementById('reqCatSelect').value;
+  const opts = getAdminSchemaOpts();
+  const tags = opts[cat] || [];
+  document.getElementById('reqTagSelect').innerHTML = tags.map(t => `<option value="${escHtml(t)}">${escHtml(t)}</option>`).join('');
+}
+
+function renderReqRulesList() {
+  const rules = requiredTagRules[_currentReqTag] || [];
+  const list = document.getElementById('reqRulesList');
+  if (rules.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:14px 0;color:#9ca3af;font-size:13px;border:1px dashed #e5e7eb;border-radius:7px;">暂无关联必打标签规则</div>';
+    return;
+  }
+  list.innerHTML = rules.map((r, idx) => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f9fafb;border-radius:7px;border:1px solid #e5e7eb;margin-bottom:6px;">
+      <div style="font-size:13px;color:#374151;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+        <span style="font-size:11px;color:#9ca3af;">必须同时打上</span>
+        <span style="padding:2px 8px;background:#fff7ed;color:#c2410c;border-radius:4px;font-size:12px;font-weight:600;border:1px solid #fed7aa;">${escHtml(r.cat)}</span>
+        <span style="font-size:11px;color:#9ca3af;">›</span>
+        <span style="padding:2px 8px;background:#eff6ff;color:#1d4ed8;border-radius:4px;font-size:12px;font-weight:600;border:1px solid #bfdbfe;">${escHtml(r.tag)}</span>
+      </div>
+      <span onclick="removeReqRule(${idx})" style="color:#dc2626;cursor:pointer;font-size:15px;padding:2px 5px;opacity:0.5;transition:opacity 0.15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">×</span>
+    </div>
+  `).join('');
+}
+
+function addReqRule() {
+  const cat = document.getElementById('reqCatSelect').value;
+  const tag = document.getElementById('reqTagSelect').value;
+  if (!cat || !tag) { showToast('请选择分类和标签'); return; }
+  if (!requiredTagRules[_currentReqTag]) requiredTagRules[_currentReqTag] = [];
+  if (requiredTagRules[_currentReqTag].find(r => r.cat === cat && r.tag === tag)) {
+    showToast('该规则已存在'); return;
+  }
+  requiredTagRules[_currentReqTag].push({ cat, tag });
+  renderReqRulesList();
+  showToast(`✓ 已添加：${cat} › ${tag}`);
+}
+
+function removeReqRule(idx) {
+  if (!requiredTagRules[_currentReqTag]) return;
+  requiredTagRules[_currentReqTag].splice(idx, 1);
+  if (requiredTagRules[_currentReqTag].length === 0) delete requiredTagRules[_currentReqTag];
+  renderReqRulesList();
+  showToast('已删除关联规则');
+}
+
+// Init required tag UI after DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  initRequiredTagUI();
+});
+</script>
+</body>
+</html>

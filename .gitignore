@@ -1,0 +1,19 @@
+# 内部文档
+*.md
+*.py
+*.csv
+*.pdf
+*.json
+
+# 参考图
+*.png
+*.PNG
+*.jpg
+*.jpeg
+
+# 测试素材
+test_files/
+
+# 环境变量
+.env
+.env.*
