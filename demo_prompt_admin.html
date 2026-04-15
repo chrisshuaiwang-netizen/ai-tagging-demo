@@ -643,7 +643,7 @@
               <div style="padding:14px 20px;border-bottom:1px solid #eaecf0;display:flex;align-items:center;justify-content:space-between;background:#f9fafb;">
                 <div style="font-size:13px;color:#6b7280;">当前共 <strong style="color:#374151" id="catCount">8</strong> 个分类，<strong style="color:#374151">61</strong> 个标签</div>
                 <div style="display:flex;gap:8px;">
-                  <button class="btn btn-secondary" onclick="showToast('已导出 schema.json')">⬇ 导出 JSON</button>
+                  <button class="btn btn-secondary" onclick="exportSchema()">⬇ 导出 JSON</button>
                   <button class="btn btn-secondary" onclick="document.getElementById('importModal').classList.add('show')">⬆ 导入</button>
                   <button class="btn btn-primary" onclick="document.getElementById('addCatModal').classList.add('show')">+ 新增分类</button>
                 </div>
@@ -1100,8 +1100,11 @@
     </div>
     <div class="modal-body">
       <div class="form-group">
-        <div class="form-label">标签名称 <span style="color:#dc2626;font-size:11px;">*</span></div>
-        <input class="form-input" id="addTagName" placeholder="如：全新ID.3" maxlength="40" oninput="updateAddTagPreview()">
+        <div class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+          <span>标签名称 <span style="color:#dc2626;font-size:11px;">*</span></span>
+          <span id="addTagNameCount" style="font-size:11px;color:#9ca3af;">0 / 50</span>
+        </div>
+        <input class="form-input" id="addTagName" placeholder="如：全新ID.3" maxlength="50" oninput="updateAddTagPreview()">
       </div>
       <div class="form-group" style="margin-bottom:0;">
         <div class="form-label">识别说明 <span class="tip">（可选，帮助模型更准确识别）</span></div>
@@ -1435,7 +1438,7 @@ async function runRealTest() {
     .replace(/\{\{file_type\}\}/g, 'image');
 
   const payload = {
-    model: 'doubao-seed-2-0-mini-260215',
+    model: 'doubao-seed-2-0-pro-260215',
     messages: [{
       role: 'user',
       content: [
@@ -1813,12 +1816,19 @@ function openAddTagModal(categoryBlock) {
   document.getElementById('addTagName').value = '';
   document.getElementById('addTagDef').value = '';
   document.getElementById('addTagPreview').innerHTML = '<span style="color:#9ca3af;">标签名</span>';
+  const countEl = document.getElementById('addTagNameCount');
+  if (countEl) { countEl.textContent = '0 / 50'; countEl.style.color = '#9ca3af'; }
   document.getElementById('addTagModal').classList.add('show');
   setTimeout(() => document.getElementById('addTagName').focus(), 100);
 }
 
 function updateAddTagPreview() {
-  const name = document.getElementById('addTagName').value.trim();
+  const input = document.getElementById('addTagName');
+  const name = input.value.trim();
+  const len = input.value.length;
+  const countEl = document.getElementById('addTagNameCount');
+  if (countEl) countEl.textContent = `${len} / 50`;
+  if (countEl) countEl.style.color = len > 45 ? '#ef4444' : '#9ca3af';
   const preview = document.getElementById('addTagPreview');
   if (name) {
     preview.innerHTML = escHtml(name) + '<span class="def-dot-wrap" style="margin-left:4px;"><span class="def-dot" style="opacity:0.3;"></span></span>';
@@ -1831,9 +1841,13 @@ function updateAddTagPreview() {
 function addTag() {
   const name = document.getElementById('addTagName').value.trim();
   if (!name) { showToast('请输入标签名称'); document.getElementById('addTagName').focus(); return; }
+  if (name.length > 50) { showToast('标签名称不能超过 50 字'); document.getElementById('addTagName').focus(); return; }
   const def = document.getElementById('addTagDef').value.trim();
   const block = _addTagTargetBlock;
   if (!block) return;
+  if (block.querySelector(`.schema-tag[data-name="${CSS.escape(name)}"]`)) {
+    showToast('该分类下已存在同名标签'); document.getElementById('addTagName').focus(); return;
+  }
 
   const tagsContainer = block.querySelector('.category-tags');
   // Clear placeholder if this is a fresh empty category
@@ -1908,6 +1922,9 @@ function confirmDeleteCategory() {
 function addCategory() {
   const name = document.getElementById('addCatName').value.trim();
   if (!name) { showToast('请输入分类名称'); document.getElementById('addCatName').focus(); return; }
+  if (document.querySelector(`#schemaCategories .category-block[data-cat="${CSS.escape(name)}"]`)) {
+    showToast('该分类已存在'); document.getElementById('addCatName').focus(); return;
+  }
 
   const container = document.getElementById('schemaCategories');
   const expandTip = container.querySelector('[onclick="showToast(\'展开更多分类\')"]')
@@ -1941,6 +1958,31 @@ function addCategory() {
   showToast('✓ 已创建分类：' + name);
 }
 
+// --- Export Schema ---
+function exportSchema() {
+  const blocks = document.querySelectorAll('#schemaCategories .category-block');
+  const categories = [];
+  blocks.forEach(block => {
+    const category = block.dataset.cat;
+    if (!category) return;
+    const tags = [...block.querySelectorAll('.schema-tag')].map(t => {
+      const obj = { value: t.dataset.name };
+      if (t.dataset.def) obj.definition = t.dataset.def;
+      return obj;
+    });
+    categories.push({ category, tags });
+  });
+  const json = JSON.stringify({ categories }, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'schema.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('✓ schema.json 已下载');
+}
+
 // --- Import Schema ---
 function validateImportJson() {
   const raw = document.getElementById('importJsonInput').value.trim();
@@ -1965,45 +2007,42 @@ function importSchema() {
   let data;
   try { data = JSON.parse(raw); } catch(e) { showToast('JSON 解析失败'); return; }
 
-  let addedCats = 0, addedTags = 0;
+  let addedCats = 0, addedTags = 0, skippedCats = 0, skippedTags = 0;
   const container = document.getElementById('schemaCategories');
   const expandTip = container.querySelector('div[onclick*="展开更多分类"]');
 
   (data.categories || []).forEach(cat => {
     if (!cat.category) return;
-    // Find or create category block
-    let block = container.querySelector(`.category-block[data-cat="${CSS.escape(cat.category)}"]`);
-    if (!block) {
-      block = document.createElement('div');
-      block.className = 'category-block';
-      block.dataset.cat = cat.category;
-      block.innerHTML = `
-        <div class="category-head">
-          <div class="category-name">${escHtml(cat.category)} <span class="badge badge-gray">0 个标签</span></div>
-          <div style="display:flex;gap:6px;">
-            <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
-            <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
-          </div>
+    // Skip if category already exists
+    if (container.querySelector(`.category-block[data-cat="${CSS.escape(cat.category)}"]`)) {
+      skippedCats++;
+      skippedTags += (cat.tags || []).length;
+      return;
+    }
+    const block = document.createElement('div');
+    block.className = 'category-block';
+    block.dataset.cat = cat.category;
+    block.innerHTML = `
+      <div class="category-head">
+        <div class="category-name">${escHtml(cat.category)} <span class="badge badge-gray">0 个标签</span></div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
+          <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
         </div>
-        <div class="category-tags"></div>
-      `;
-      expandTip ? container.insertBefore(block, expandTip) : container.appendChild(block);
-      const catCount = document.getElementById('catCount');
-      if (catCount) catCount.textContent = String(parseInt(catCount.textContent || '8') + 1);
-      addedCats++;
-    }
-    if (!block) return;
+      </div>
+      <div class="category-tags"></div>
+    `;
+    expandTip ? container.insertBefore(block, expandTip) : container.appendChild(block);
+    const catCount = document.getElementById('catCount');
+    if (catCount) catCount.textContent = String(parseInt(catCount.textContent || '8') + 1);
+    addedCats++;
 
-    // Clear placeholder text if present
     const tagsContainer = block.querySelector('.category-tags');
-    if (tagsContainer.children.length === 0 || tagsContainer.innerHTML.includes('暂无标签')) {
-      tagsContainer.innerHTML = '';
-    }
-
+    const seen = new Set();
     (cat.tags || []).forEach(t => {
       if (!t.value) return;
-      // Skip duplicates
-      if (block.querySelector(`.schema-tag[data-name="${CSS.escape(t.value)}"]`)) return;
+      if (seen.has(t.value)) { skippedTags++; return; }
+      seen.add(t.value);
       const chip = document.createElement('div');
       const def = t.definition || '';
       chip.className = 'schema-tag' + (def ? ' has-def' : '');
@@ -2013,7 +2052,7 @@ function importSchema() {
       const editLabel = def ? '✎' : '+ 说明';
       chip.innerHTML = `<span class="tag-name">${escHtml(t.value)}</span>${dotHtml}<span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">${editLabel}</span><span class="tag-del" onclick="delTag(this,'${escHtml(t.value)}')">×</span></span>`;
       tagsContainer.appendChild(chip);
-      // Update badge
+      addReqBtnToTag(chip);
       const badge = block.querySelector('.category-name .badge');
       if (badge) badge.textContent = (parseInt(badge.textContent) + 1) + ' 个标签';
       addedTags++;
@@ -2022,7 +2061,10 @@ function importSchema() {
 
   document.getElementById('importJsonInput').value = '';
   document.getElementById('importModal').classList.remove('show');
-  showToast(`✓ 导入完成：新增 ${addedCats} 个分类，${addedTags} 个标签`);
+  let msg = `✓ 导入完成：新增 ${addedCats} 个分类，${addedTags} 个标签`;
+  if (skippedCats > 0) msg += `；已过滤 ${skippedCats} 个重复分类`;
+  if (skippedTags > 0) msg += `，${skippedTags} 个重复标签`;
+  showToast(msg);
 }
 
 // --- History Filter ---
