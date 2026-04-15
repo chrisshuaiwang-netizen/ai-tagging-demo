@@ -75,6 +75,20 @@
   .status-dot.processing { background: #f59e0b; animation: pulse 1s infinite; }
   @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 
+  /* Failed state */
+  .ai-failed-state { padding: 40px 24px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+  .ai-failed-icon { width: 44px; height: 44px; border-radius: 50%; background: #fef2f2; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .ai-failed-title { font-size: 14px; font-weight: 600; color: #111; }
+  .ai-failed-desc { font-size: 12px; color: #9ca3af; line-height: 1.6; }
+  .ai-failed-btn { margin-top: 4px; padding: 8px 20px; background: #667eea; color: #fff; border: none; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+  .ai-failed-btn:hover { background: #5a6fd8; }
+
+  /* Demo state toggle */
+  .demo-toggle { display: flex; align-items: center; gap: 6px; padding: 6px 18px; background: #fffbeb; border-bottom: 1px solid #fde68a; font-size: 11px; color: #92400e; }
+  .demo-toggle span { font-weight: 500; }
+  .demo-toggle-btn { padding: 2px 8px; border-radius: 4px; border: 1px solid #d1d5db; background: #fff; font-size: 11px; color: #374151; cursor: pointer; }
+  .demo-toggle-btn:hover { background: #f3f4f6; }
+
   /* Category sections */
   .cat-section { padding: 12px 18px; border-bottom: 1px solid #f3f4f6; }
   .cat-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
@@ -293,16 +307,35 @@
       <!-- Tab: AI Tags -->
       <div id="tab-ai" class="tab-pane active" style="display:none;">
 
+        <!-- Demo toggle -->
+        <div class="demo-toggle">
+          <span>演示状态：</span>
+          <button class="demo-toggle-btn" onclick="setAiStatus('completed')">✓ 分析成功</button>
+          <button class="demo-toggle-btn" onclick="setAiStatus('failed')">✕ 分析失败</button>
+        </div>
+
         <!-- AI Header -->
         <div class="ai-header">
           <div class="ai-header-top">
             <div class="ai-title">AI 标签</div>
-            <div style="display:flex;align-items:center;gap:6px;">
+            <div id="aiHeaderBtns" style="display:flex;align-items:center;gap:6px;">
               <button class="ai-action-btn" onclick="openAddTagModal('')">+ 添加分类</button>
-              <button class="ai-action-btn" onclick="openReanalyzeConfirm()">重新分析</button>
             </div>
           </div>
         </div>
+
+        <!-- Failed state -->
+        <div id="aiFailedState" style="display:none;">
+          <div class="ai-failed-state">
+            <div class="ai-failed-icon">⚠️</div>
+            <div class="ai-failed-title">AI 分析失败</div>
+            <div class="ai-failed-desc">文件分析过程中出现错误<br>请点击下方按钮重新发起分析</div>
+            <button class="ai-failed-btn" onclick="openReanalyzeConfirm()">重新分析</button>
+          </div>
+        </div>
+
+        <!-- Category sections wrapper -->
+        <div id="aiCatSections">
 
         <!-- 车型 -->
         <div class="cat-section">
@@ -401,6 +434,7 @@
           </div>
         </div>
 
+        </div><!-- /#aiCatSections -->
 
       </div>
 
@@ -686,7 +720,7 @@ function addTagToSection(tag, cat) {
 
   if (!section) {
     // Create new category section for custom categories entered in global mode
-    const container = document.querySelector('#tab-ai');
+    const container = document.querySelector('#aiCatSections');
     section = document.createElement('div');
     section.className = 'cat-section';
     section.innerHTML = `
@@ -698,10 +732,9 @@ function addTagToSection(tag, cat) {
         <div class="add-tag-inline" onclick="openAddTagModal('${cat}')">+ 添加标签</div>
       </div>
     `;
-    // Append before the closing of tab-ai (after last .cat-section)
     const lastSection = [...container.querySelectorAll('.cat-section')].pop();
     if (lastSection) lastSection.after(section);
-    else container.querySelector('.ai-header').after(section);
+    else container.prepend(section);
   }
 
   const wrap = section.querySelector('.tags-wrap');
@@ -725,6 +758,25 @@ function closeModal(id) {
   document.getElementById(id).classList.remove('show');
 }
 
+// ─── AI Status ───
+let aiStatus = 'completed';
+
+function setAiStatus(status) {
+  aiStatus = status;
+  const failedEl = document.getElementById('aiFailedState');
+  const catEl = document.getElementById('aiCatSections');
+  const headerBtns = document.getElementById('aiHeaderBtns');
+  if (status === 'failed') {
+    failedEl.style.display = 'block';
+    catEl.style.display = 'none';
+    headerBtns.style.display = 'none';
+  } else {
+    failedEl.style.display = 'none';
+    catEl.style.display = 'block';
+    headerBtns.style.display = 'flex';
+  }
+}
+
 function openReanalyzeConfirm() {
   document.getElementById('reanalyzeModal').classList.add('show');
 }
@@ -732,7 +784,10 @@ function openReanalyzeConfirm() {
 function confirmReanalyze() {
   closeModal('reanalyzeModal');
   showToast('正在重新调用 AI 分析...');
-  setTimeout(() => showToast('✓ 重新分析完成，结果已更新'), 2000);
+  setTimeout(() => {
+    setAiStatus('completed');
+    showToast('✓ 重新分析完成，结果已更新');
+  }, 2000);
 }
 
 // Close modal on overlay click
