@@ -311,6 +311,7 @@
         <div class="demo-toggle">
           <span>演示状态：</span>
           <button class="demo-toggle-btn" onclick="setAiStatus('completed')">✓ 分析成功</button>
+          <button class="demo-toggle-btn" onclick="setAiStatus('processing')">⏳ 分析中</button>
           <button class="demo-toggle-btn" onclick="setAiStatus('failed')">✕ 分析失败</button>
         </div>
 
@@ -321,6 +322,15 @@
             <div id="aiHeaderBtns" style="display:flex;align-items:center;gap:6px;">
               <button class="ai-action-btn" onclick="openAddTagModal('')">+ 添加分类</button>
             </div>
+          </div>
+        </div>
+
+        <!-- Processing state -->
+        <div id="aiProcessingState" style="display:none;">
+          <div class="ai-processing">
+            <div class="icon">⚙️</div>
+            <div class="text">AI 正在分析中…</div>
+            <div class="sub">预计需要 10–30 秒，完成后结果将自动更新</div>
           </div>
         </div>
 
@@ -763,18 +773,14 @@ let aiStatus = 'completed';
 
 function setAiStatus(status) {
   aiStatus = status;
+  const processingEl = document.getElementById('aiProcessingState');
   const failedEl = document.getElementById('aiFailedState');
   const catEl = document.getElementById('aiCatSections');
   const headerBtns = document.getElementById('aiHeaderBtns');
-  if (status === 'failed') {
-    failedEl.style.display = 'block';
-    catEl.style.display = 'none';
-    headerBtns.style.display = 'none';
-  } else {
-    failedEl.style.display = 'none';
-    catEl.style.display = 'block';
-    headerBtns.style.display = 'flex';
-  }
+  processingEl.style.display = status === 'processing' ? 'block' : 'none';
+  failedEl.style.display = status === 'failed' ? 'block' : 'none';
+  catEl.style.display = status === 'completed' ? 'block' : 'none';
+  headerBtns.style.display = status === 'completed' ? 'flex' : 'none';
 }
 
 function openReanalyzeConfirm() {

@@ -197,6 +197,13 @@
   .tag-req-btn { font-size: 11px; cursor: pointer; padding: 1px 5px; border-radius: 3px; color: #d97706; transition: background 0.12s; white-space: nowrap; }
   .tag-req-btn:hover { background: #fef3c7; }
 
+  /* Oplog tab */
+  .oplog-badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+  .oplog-schema { background: #ede9fe; color: #7c3aed; }
+  .oplog-prompt { background: #dbeafe; color: #2563eb; }
+  .oplog-export { background: #d1fae5; color: #059669; }
+  .oplog-detail { font-size: 12px; color: #374151; max-width: 340px; }
+
   /* History tab */
   .history-table { width: 100%; border-collapse: collapse; }
   .history-table th { text-align: left; padding: 10px 16px; background: #f9fafb; border-bottom: 1px solid #eaecf0; color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -418,7 +425,7 @@
           </div>
           <div class="config-header-right">
             <button class="btn btn-secondary" onclick="document.getElementById('testModal').classList.add('show')">🧪 测试效果</button>
-            <button class="btn btn-primary" onclick="document.getElementById('saveModal').classList.add('show')">💾 保存新版本</button>
+            <button class="btn btn-primary" onclick="openSaveModal('AI 打标 Prompt')">💾 保存新版本</button>
           </div>
         </div>
 
@@ -430,6 +437,7 @@
             <button class="tab-btn" onclick="switchTab('schema',this)">标签 Schema</button>
             <button class="tab-btn" onclick="switchTab('history',this)">历史版本</button>
             <button class="tab-btn" onclick="switchTab('usage',this)">消耗统计</button>
+            <button class="tab-btn" onclick="switchTab('oplog',this)">操作记录</button>
           </div>
 
           <!-- Tab: AI 打标 -->
@@ -504,7 +512,7 @@
                   </div>
                   <div style="display:flex;gap:8px;">
                     <button class="btn btn-secondary" onclick="showToast('已重置为上次保存版本')">重置</button>
-                    <button class="btn btn-primary" onclick="document.getElementById('saveModal').classList.add('show')">保存为新版本</button>
+                    <button class="btn btn-primary" onclick="openSaveModal('AI 打标 Prompt')">保存为新版本</button>
                   </div>
                 </div>
               </div>
@@ -630,7 +638,7 @@
                   </div>
                   <div style="display:flex;gap:8px;">
                     <button class="btn btn-secondary" onclick="showToast('已重置为上次保存版本')">重置</button>
-                    <button class="btn btn-primary" onclick="document.getElementById('saveModal').classList.add('show')">保存为新版本</button>
+                    <button class="btn btn-primary" onclick="openSaveModal('AI 命名 Prompt')">保存为新版本</button>
                   </div>
                 </div>
               </div>
@@ -963,6 +971,30 @@
               </div>
             </div>
           </div>
+
+          <!-- Tab: 操作记录 -->
+          <div id="tab-oplog" class="tab-content">
+            <div class="editor-card" style="padding:0;">
+              <div style="padding:14px 20px;border-bottom:1px solid #eaecf0;display:flex;align-items:center;justify-content:space-between;background:#f9fafb;">
+                <div style="font-size:13px;color:#6b7280;">共 <strong style="color:#374151" id="oplogCount">0</strong> 条操作记录</div>
+                <span style="font-size:11px;color:#9ca3af;">记录本次会话中的 Prompt / Schema 变更操作</span>
+              </div>
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th style="width:160px;">时间</th>
+                    <th style="width:72px;">类型</th>
+                    <th>操作详情</th>
+                    <th style="width:80px;">操作人</th>
+                  </tr>
+                </thead>
+                <tbody id="oplogBody">
+                  <tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:40px 0;font-size:13px;">暂无操作记录，请在其他标签页进行 Prompt 或 Schema 操作</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -979,11 +1011,11 @@
     <div class="modal-body">
       <div class="form-group">
         <div class="form-label">版本号</div>
-        <input class="form-input" value="v1.2.1" placeholder="如 v1.2.1">
+        <input class="form-input" id="saveVersionInput" value="v1.2.1" placeholder="如 v1.2.1">
       </div>
       <div class="form-group">
         <div class="form-label">变更说明 <span class="tip">（必填，便于历史追溯）</span></div>
-        <textarea class="form-input" style="height:80px;resize:vertical;" placeholder="描述本次修改的内容，如：新增XX车型标签，优化XX分类定义..."></textarea>
+        <textarea class="form-input" id="saveVersionDesc" style="height:80px;resize:vertical;" placeholder="描述本次修改的内容，如：新增XX车型标签，优化XX分类定义..."></textarea>
       </div>
       <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px;font-size:12px;color:#92400e;display:flex;gap:8px;">
         <span>⚠️</span>
@@ -1294,6 +1326,48 @@
 </div>
 
 <script>
+// ─── Operation Log ───
+const opLog = [];
+const OP_USER = '王工';
+
+function _tsNow() {
+  const d = new Date();
+  return [d.getFullYear(), String(d.getMonth()+1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-') + ' ' +
+    [String(d.getHours()).padStart(2,'0'), String(d.getMinutes()).padStart(2,'0'), String(d.getSeconds()).padStart(2,'0')].join(':');
+}
+
+function addOpLog(type, detail) {
+  opLog.unshift({ ts: _tsNow(), type, detail, user: OP_USER });
+  renderOpLog();
+}
+
+function renderOpLog() {
+  const body = document.getElementById('oplogBody');
+  const countEl = document.getElementById('oplogCount');
+  if (!body) return;
+  if (countEl) countEl.textContent = opLog.length;
+  if (opLog.length === 0) {
+    body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:40px 0;font-size:13px;">暂无操作记录，请在其他标签页进行 Prompt 或 Schema 操作</td></tr>';
+    return;
+  }
+  const typeCls = { 'Schema': 'oplog-schema', 'Prompt': 'oplog-prompt', '导出': 'oplog-export' };
+  body.innerHTML = opLog.map(r => `
+    <tr>
+      <td style="white-space:nowrap;color:#6b7280;font-size:12px;">${r.ts}</td>
+      <td><span class="oplog-badge ${typeCls[r.type] || 'oplog-schema'}">${r.type}</span></td>
+      <td class="oplog-detail">${escHtml(r.detail)}</td>
+      <td style="font-size:13px;">${r.user}</td>
+    </tr>
+  `).join('');
+}
+
+// ─── Open Save Modal ───
+let _saveModule = 'AI 打标 Prompt';
+function openSaveModal(module) {
+  _saveModule = module;
+  document.getElementById('saveModal').classList.add('show');
+}
+
 function switchTab(name, btn) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1686,10 +1760,12 @@ function refreshUsage() {
 
 function saveVersion() {
   document.getElementById('saveModal').classList.remove('show');
-  showToast('✓ v1.2.1 已保存并生效');
-  // Update save bar
+  const ver = document.getElementById('saveVersionInput').value.trim() || 'v1.2.1';
+  const desc = document.getElementById('saveVersionDesc').value.trim();
+  showToast('✓ ' + ver + ' 已保存并生效');
   document.querySelector('.dot-unsaved').classList.add('saved');
-  document.querySelector('.save-bar-hint').innerHTML = '<div class="dot-unsaved saved"></div> 已保存 · v1.2.1';
+  document.querySelector('.save-bar-hint').innerHTML = '<div class="dot-unsaved saved"></div> 已保存 · ' + ver;
+  addOpLog('Prompt', '保存版本 ' + ver + '【' + _saveModule + '】' + (desc ? '：' + desc : ''));
 }
 
 function addCarModel() {
@@ -1760,11 +1836,13 @@ function clearDef() {
 
 function delTag(btn, name) {
   const chip = btn.closest('.schema-tag');
+  const cat = chip.closest('.category-block')?.dataset.cat || '';
   chip.style.opacity = '0';
   chip.style.transform = 'scale(0.85)';
   chip.style.transition = 'all 0.18s';
   setTimeout(() => chip.remove(), 180);
   showToast('已删除标签：' + name);
+  addOpLog('Schema', '删除标签「' + name + '」← 分类「' + cat + '」');
 }
 
 function escHtml(s) {
@@ -1885,6 +1963,7 @@ function addTag() {
 
   document.getElementById('addTagModal').classList.remove('show');
   showToast('✓ 已添加标签：' + name);
+  addOpLog('Schema', '新增标签「' + name + '」→ 分类「' + (block.dataset.cat || '') + '」');
 }
 
 // --- Delete Category ---
@@ -1916,6 +1995,7 @@ function confirmDeleteCategory() {
   }, 200);
   closeDeleteCatModal();
   showToast('✓ 已删除分类：' + name);
+  addOpLog('Schema', '删除分类「' + name + '」');
 }
 
 // --- Add Category Modal ---
@@ -1956,6 +2036,7 @@ function addCategory() {
   document.getElementById('addCatName').value = '';
   document.getElementById('addCatModal').classList.remove('show');
   showToast('✓ 已创建分类：' + name);
+  addOpLog('Schema', '新增分类「' + name + '」');
 }
 
 // --- Export Schema ---
@@ -1981,6 +2062,7 @@ function exportSchema() {
   a.click();
   URL.revokeObjectURL(url);
   showToast('✓ schema.json 已下载');
+  addOpLog('导出', '导出 schema.json（共 ' + categories.length + ' 个分类）');
 }
 
 // --- Import Schema ---
@@ -2065,6 +2147,7 @@ function importSchema() {
   if (skippedCats > 0) msg += `；已过滤 ${skippedCats} 个重复分类`;
   if (skippedTags > 0) msg += `，${skippedTags} 个重复标签`;
   showToast(msg);
+  addOpLog('Schema', `JSON 导入：新增 ${addedCats} 个分类、${addedTags} 个标签` + (skippedCats || skippedTags ? `（过滤 ${skippedCats} 分类 / ${skippedTags} 标签）` : ''));
 }
 
 // --- History Filter ---

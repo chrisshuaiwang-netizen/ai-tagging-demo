@@ -93,7 +93,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .ai-dropdown-title { font-size: 12px; font-weight: 600; color: #374151; }
 .ai-dropdown-clear { font-size: 11px; color: #9ca3af; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
 .ai-dropdown-clear:hover { color: #ef4444; background: #fee2e2; }
-.ai-dropdown-body { max-height: 400px; overflow-y: auto; padding: 4px 0 6px; }
+.ai-dropdown-body { max-height: 360px; overflow-y: auto; padding: 4px 0 6px; }
+.ai-dropdown-footer { padding: 8px 12px; border-top: 1px solid #f3f4f6; display: flex; align-items: center; justify-content: space-between; }
+.ai-match-label { font-size: 11px; color: #6b7280; }
+.ai-match-toggle { display: flex; border: 1px solid #e5e7eb; border-radius: 5px; overflow: hidden; }
+.ai-match-btn { padding: 3px 9px; font-size: 11px; background: #fff; border: none; cursor: pointer; color: #6b7280; transition: all 0.15s; white-space: nowrap; }
+.ai-match-btn.active { background: #667eea; color: #fff; }
+.strip-mode { font-size: 11px; padding: 2px 7px; background: #e0e7ff; color: #4338ca; border-radius: 4px; white-space: nowrap; }
 .ai-cat-block { margin-bottom: 2px; }
 .ai-cat-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px 3px; cursor: pointer; }
 .ai-cat-name { font-size: 11px; font-weight: 600; color: #9ca3af; letter-spacing: 0.04em; text-transform: uppercase; }
@@ -362,6 +368,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
               </div>
 
             </div>
+            <div class="ai-dropdown-footer">
+              <span class="ai-match-label">筛选模式</span>
+              <div class="ai-match-toggle">
+                <button class="ai-match-btn active" id="matchBtnAny" onclick="setMatchMode('any')">任意符合</button>
+                <button class="ai-match-btn" id="matchBtnAll" onclick="setMatchMode('all')">完全符合</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -384,6 +397,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
       <div class="active-filter-strip" id="activeFilterStrip">
         <span class="strip-label">AI 标签：</span>
         <div id="activeTagList" style="display:flex;flex-wrap:wrap;gap:5px;"></div>
+        <span class="strip-mode" id="stripMode">任意符合</span>
         <span class="strip-clear" onclick="clearAllTags()">✕ 清除</span>
       </div>
     </div>
@@ -439,6 +453,14 @@ const MOCK_FILES = [
 let selectedTags = {}; // { "车型": ["全新探岳L"], "商品亮点": ["外观","内饰"] }
 let appliedTags = {};  // committed filter
 let currentFolder = '全部文件';
+let matchMode = 'any'; // 'any' = 任意符合, 'all' = 完全符合
+
+function setMatchMode(mode) {
+  matchMode = mode;
+  document.getElementById('matchBtnAny').classList.toggle('active', mode === 'any');
+  document.getElementById('matchBtnAll').classList.toggle('active', mode === 'all');
+  applyFilter();
+}
 
 // ─── Init ───
 renderGrid(MOCK_FILES);
@@ -564,14 +586,27 @@ function applyFilter() {
     tagList.innerHTML = '';
   }
 
+  // Update strip mode badge
+  document.getElementById('stripMode').textContent = matchMode === 'all' ? '完全符合' : '任意符合';
+
   // Filter files
   let filtered = MOCK_FILES;
   if (hasFilter) {
-    filtered = MOCK_FILES.filter(file =>
-      Object.entries(appliedTags).every(([cat, vals]) =>
-        vals.some(v => file.tags.some(t => t.cat === cat && t.val === v))
-      )
-    );
+    if (matchMode === 'all') {
+      // 完全符合：每个选中分类都必须命中
+      filtered = MOCK_FILES.filter(file =>
+        Object.entries(appliedTags).every(([cat, vals]) =>
+          vals.some(v => file.tags.some(t => t.cat === cat && t.val === v))
+        )
+      );
+    } else {
+      // 任意符合：命中任意一个分类/标签即可
+      filtered = MOCK_FILES.filter(file =>
+        Object.entries(appliedTags).some(([cat, vals]) =>
+          vals.some(v => file.tags.some(t => t.cat === cat && t.val === v))
+        )
+      );
+    }
   }
   renderGrid(filtered);
 }
