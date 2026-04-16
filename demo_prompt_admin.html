@@ -375,31 +375,19 @@
           </div>
           <div class="tenant-item active" onclick="selectTenant(this, 'faw_vw')">
             <div class="tenant-avatar" style="background:linear-gradient(135deg,#3b82f6,#1d4ed8)">大</div>
-            <div class="tenant-info">
-              <div class="name">一汽大众</div>
-              <div class="meta" id="faw_vw-meta"><div class="status-dot"></div>打标✓ 命名✓ · v1.2.0</div>
-            </div>
+            <div class="tenant-info"><div class="name">一汽大众</div></div>
           </div>
           <div class="tenant-item" onclick="selectTenant(this, 'changan')">
             <div class="tenant-avatar" style="background:linear-gradient(135deg,#f59e0b,#d97706)">长</div>
-            <div class="tenant-info">
-              <div class="name">长安汽车</div>
-              <div class="meta"><div class="status-dot"></div>仅打标 · v1.0.1</div>
-            </div>
+            <div class="tenant-info"><div class="name">长安汽车</div></div>
           </div>
           <div class="tenant-item" onclick="selectTenant(this, 'byd')">
             <div class="tenant-avatar" style="background:linear-gradient(135deg,#10b981,#059669)">比</div>
-            <div class="tenant-info">
-              <div class="name">比亚迪</div>
-              <div class="meta"><div class="status-dot off"></div>未启用 · 待配置</div>
-            </div>
+            <div class="tenant-info"><div class="name">比亚迪</div></div>
           </div>
           <div class="tenant-item" onclick="selectTenant(this, 'nio')">
             <div class="tenant-avatar" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">蔚</div>
-            <div class="tenant-info">
-              <div class="name">蔚来汽车</div>
-              <div class="meta"><div class="status-dot off"></div>未启用 · 待配置</div>
-            </div>
+            <div class="tenant-info"><div class="name">蔚来汽车</div></div>
           </div>
         </div>
 
@@ -1204,21 +1192,7 @@ function switchTab(name, btn) {
   btn.classList.add('active');
 }
 
-// --- 读取当前两个 toggle 状态并同步左侧企业列表 meta ---
-function syncTenantMeta() {
-  const tagging = document.getElementById('taggingToggle').checked;
-  const naming  = document.getElementById('namingToggle').checked;
-  const activeMeta = document.querySelector('.tenant-item.active .meta');
-  if (!activeMeta) return;
-  const version = (activeMeta.textContent.match(/v[\d.]+/) || [''])[0];
-  let label;
-  if (tagging && naming)       label = '打标✓ 命名✓';
-  else if (tagging && !naming) label = '仅打标';
-  else if (!tagging && naming) label = '仅命名';
-  else                          label = '全部关闭';
-  const dotOff = (!tagging && !naming) ? ' off' : '';
-  activeMeta.innerHTML = `<div class="status-dot${dotOff}"></div>${label} · ${version}`;
-}
+function syncTenantMeta() { /* meta 已移除，无需同步 */ }
 
 function toggleTagging(checkbox) {
   const enabled = checkbox.checked;
