@@ -233,7 +233,7 @@
   .mod-schema  { background: #dcfce7; color: #16a34a; }
 
   /* Usage tab */
-  .usage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+  .usage-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 20px; }
   .usage-card { background: #f9fafb; border-radius: 8px; padding: 16px; border: 1px solid #e5e7eb; }
   .usage-card .label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
   .usage-card .value { font-size: 22px; font-weight: 700; color: #1a1a2e; }
@@ -485,16 +485,6 @@
 }</textarea>
                 </div>
 
-                <div class="save-bar" style="margin: 20px -20px -20px; border-radius: 0 0 10px 10px;">
-                  <div class="save-bar-hint">
-                    <div class="dot-unsaved"></div>
-                    有未保存的更改
-                  </div>
-                  <div style="display:flex;gap:8px;">
-                    <button class="btn btn-secondary" onclick="showToast('已重置为上次保存版本')">重置</button>
-                    <button class="btn btn-primary" onclick="openSaveModal('AI 打标 Prompt')">保存</button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -611,16 +601,6 @@
                   </div>
                 </div>
 
-                <div class="save-bar" style="margin: 4px -20px -20px; border-radius: 0 0 10px 10px;">
-                  <div class="save-bar-hint">
-                    <div class="dot-unsaved"></div>
-                    有未保存的更改
-                  </div>
-                  <div style="display:flex;gap:8px;">
-                    <button class="btn btn-secondary" onclick="showToast('已重置为上次保存版本')">重置</button>
-                    <button class="btn btn-primary" onclick="openSaveModal('AI 命名 Prompt')">保存</button>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -754,20 +734,12 @@
                 <div class="usage-card">
                   <div class="label">总 Token 消耗</div>
                   <div class="value">2,441,820</div>
-                  <div class="sub trend-up">↑ 18.3% vs 上期</div>
                   <div class="mini-chart"></div>
                 </div>
                 <div class="usage-card">
                   <div class="label">处理文件数</div>
                   <div class="value">1,284</div>
-                  <div class="sub trend-up">↑ 6.2% vs 上期</div>
                   <div class="mini-chart" style="background:linear-gradient(to right,#10b98122,#10b98144);"></div>
-                </div>
-                <div class="usage-card">
-                  <div class="label">预估费用</div>
-                  <div class="value">¥ 48.60</div>
-                  <div class="sub">单文件均价 ¥ 0.038</div>
-                  <div class="mini-chart" style="background:linear-gradient(to right,#f59e0b22,#f59e0b44);"></div>
                 </div>
               </div>
 
@@ -779,17 +751,16 @@
                       <th style="text-align:left;padding:8px 16px;font-size:12px;color:#6b7280;font-weight:600;">日期</th>
                       <th style="text-align:right;padding:8px 16px;font-size:12px;color:#6b7280;font-weight:600;">处理文件</th>
                       <th style="text-align:right;padding:8px 16px;font-size:12px;color:#6b7280;font-weight:600;">Token 消耗</th>
-                      <th style="text-align:right;padding:8px 16px;font-size:12px;color:#6b7280;font-weight:600;">预估费用</th>
                     </tr>
                   </thead>
                   <tbody id="usageDailyBody">
-                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-31</td><td style="text-align:right;padding:9px 16px;font-size:13px;">52</td><td style="text-align:right;padding:9px 16px;font-size:13px;">98,800</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥1.98</td></tr>
-                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-30</td><td style="text-align:right;padding:9px 16px;font-size:13px;">45</td><td style="text-align:right;padding:9px 16px;font-size:13px;">85,500</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥1.71</td></tr>
-                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-29</td><td style="text-align:right;padding:9px 16px;font-size:13px;">61</td><td style="text-align:right;padding:9px 16px;font-size:13px;">115,900</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥2.32</td></tr>
-                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-28</td><td style="text-align:right;padding:9px 16px;font-size:13px;">78</td><td style="text-align:right;padding:9px 16px;font-size:13px;">148,200</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥2.96</td></tr>
-                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-27</td><td style="text-align:right;padding:9px 16px;font-size:13px;">34</td><td style="text-align:right;padding:9px 16px;font-size:13px;">64,600</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥1.29</td></tr>
-                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-26</td><td style="text-align:right;padding:9px 16px;font-size:13px;">42</td><td style="text-align:right;padding:9px 16px;font-size:13px;">79,800</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥1.60</td></tr>
-                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-25</td><td style="text-align:right;padding:9px 16px;font-size:13px;">55</td><td style="text-align:right;padding:9px 16px;font-size:13px;">104,500</td><td style="text-align:right;padding:9px 16px;font-size:13px;">¥2.09</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-31</td><td style="text-align:right;padding:9px 16px;font-size:13px;">52</td><td style="text-align:right;padding:9px 16px;font-size:13px;">98,800</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-30</td><td style="text-align:right;padding:9px 16px;font-size:13px;">45</td><td style="text-align:right;padding:9px 16px;font-size:13px;">85,500</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-29</td><td style="text-align:right;padding:9px 16px;font-size:13px;">61</td><td style="text-align:right;padding:9px 16px;font-size:13px;">115,900</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-28</td><td style="text-align:right;padding:9px 16px;font-size:13px;">78</td><td style="text-align:right;padding:9px 16px;font-size:13px;">148,200</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-27</td><td style="text-align:right;padding:9px 16px;font-size:13px;">34</td><td style="text-align:right;padding:9px 16px;font-size:13px;">64,600</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-26</td><td style="text-align:right;padding:9px 16px;font-size:13px;">42</td><td style="text-align:right;padding:9px 16px;font-size:13px;">79,800</td></tr>
+                    <tr style="border-top:1px solid #f3f4f6;"><td style="padding:9px 16px;font-size:13px;">2026-03-25</td><td style="text-align:right;padding:9px 16px;font-size:13px;">55</td><td style="text-align:right;padding:9px 16px;font-size:13px;">104,500</td></tr>
                     <tr style="border-top:1px solid #f3f4f6;color:#9ca3af;font-size:12px;"><td style="padding:8px 16px;" colspan="4" style="text-align:center;">… 更早记录（共 31 天）</td></tr>
                   </tbody>
                 </table>
@@ -1566,8 +1537,6 @@ function saveVersion() {
   const desc = document.getElementById('saveVersionDesc').value.trim();
   document.getElementById('saveVersionDesc').value = '';
   showToast('✓ 配置已保存并生效');
-  document.querySelector('.dot-unsaved').classList.add('saved');
-  document.querySelector('.save-bar-hint').innerHTML = '<div class="dot-unsaved saved"></div> 已保存';
   addOpLog('Prompt', '保存配置【' + _saveModule + '】' + (desc ? '：' + desc : ''));
 }
 
