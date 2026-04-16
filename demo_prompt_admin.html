@@ -418,7 +418,7 @@
           </div>
           <div class="config-header-right">
             <button class="btn btn-secondary" onclick="document.getElementById('testModal').classList.add('show')">🧪 测试效果</button>
-            <button class="btn btn-primary" onclick="openSaveModal('AI 打标 Prompt')">💾 保存新版本</button>
+            <button class="btn btn-primary" onclick="openSaveModal('AI 打标 Prompt')">💾 保存</button>
           </div>
         </div>
 
@@ -428,7 +428,6 @@
             <button class="tab-btn active" onclick="switchTab('tagging',this)">AI 打标</button>
             <button class="tab-btn" onclick="switchTab('naming',this)">AI 命名</button>
             <button class="tab-btn" onclick="switchTab('schema',this)">标签 Schema</button>
-            <button class="tab-btn" onclick="switchTab('history',this)">历史版本</button>
             <button class="tab-btn" onclick="switchTab('usage',this)">消耗统计</button>
             <button class="tab-btn" onclick="switchTab('oplog',this)">操作记录</button>
           </div>
@@ -505,7 +504,7 @@
                   </div>
                   <div style="display:flex;gap:8px;">
                     <button class="btn btn-secondary" onclick="showToast('已重置为上次保存版本')">重置</button>
-                    <button class="btn btn-primary" onclick="openSaveModal('AI 打标 Prompt')">保存为新版本</button>
+                    <button class="btn btn-primary" onclick="openSaveModal('AI 打标 Prompt')">保存</button>
                   </div>
                 </div>
               </div>
@@ -631,7 +630,7 @@
                   </div>
                   <div style="display:flex;gap:8px;">
                     <button class="btn btn-secondary" onclick="showToast('已重置为上次保存版本')">重置</button>
-                    <button class="btn btn-primary" onclick="openSaveModal('AI 命名 Prompt')">保存为新版本</button>
+                    <button class="btn btn-primary" onclick="openSaveModal('AI 命名 Prompt')">保存</button>
                   </div>
                 </div>
               </div>
@@ -749,163 +748,8 @@
             </div>
           </div>
 
-          <!-- Tab: History -->
-          <div id="tab-history" class="tab-content">
-            <div class="editor-card" style="padding:0;">
-              <div style="padding:14px 20px;border-bottom:1px solid #eaecf0;display:flex;align-items:center;justify-content:space-between;background:#f9fafb;">
-                <div style="display:flex;align-items:center;gap:16px;">
-                  <div style="font-size:13px;color:#6b7280;">共 <strong style="color:#374151">8</strong> 条变更记录</div>
-                  <div class="history-filter">
-                    <button class="filter-btn active" onclick="filterHistory('all',this)">全部</button>
-                    <button class="filter-btn" onclick="filterHistory('tagging',this)">AI 打标</button>
-                    <button class="filter-btn" onclick="filterHistory('naming',this)">AI 命名</button>
-                  </div>
-                </div>
-                <div style="font-size:12px;color:#9ca3af;display:flex;align-items:center;gap:6px;">
-                  <span style="color:#059669;">●</span> 当前生效版本
-                </div>
-              </div>
-              <table class="history-table">
-                <thead>
-                  <tr>
-                    <th>版本号</th>
-                    <th>模块</th>
-                    <th>变更说明</th>
-                    <th>变动摘要</th>
-                    <th>操作人</th>
-                    <th>时间</th>
-                    <th>操作</th>
-                  </tr>
-                </thead>
-                <tbody id="historyBody">
-                  <!-- v1.2.0 tagging -->
-                  <tr class="active-version-row" data-module="tagging">
-                    <td><span class="version-num">v1.2.0</span> <span style="color:#059669;font-size:10px;">●</span></td>
-                    <td><span class="mod-badge mod-tagging">打标</span></td>
-                    <td>新增 ID.纯享版、全新速腾L 车型标签</td>
-                    <td><span class="diff-badge diff-add">+2 标签</span></td>
-                    <td>王工</td>
-                    <td>2026-03-28 14:30</td>
-                    <td>
-                      <div class="row-actions">
-                        <button class="btn-link" onclick="openVersionDetail('v1.2.0','tagging')">查看</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <!-- v1.2.0 naming -->
-                  <tr class="active-version-row" data-module="naming">
-                    <td><span class="version-num">v1.2.0</span> <span style="color:#059669;font-size:10px;">●</span></td>
-                    <td><span class="mod-badge mod-naming">命名</span></td>
-                    <td>命名格式新增 [序号] 字段，补充多文件批次规则</td>
-                    <td><span class="diff-badge diff-mod">~1 命名规则</span></td>
-                    <td>王工</td>
-                    <td>2026-03-28 14:30</td>
-                    <td>
-                      <div class="row-actions">
-                        <button class="btn-link" onclick="openVersionDetail('v1.2.0','naming')">查看</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <!-- v1.1.4: 仅命名 -->
-                  <tr data-module="naming">
-                    <td><span class="version-num">v1.1.4</span></td>
-                    <td><span class="mod-badge mod-naming">命名</span></td>
-                    <td>命名 Prompt 优化：强调禁止使用空格和特殊字符，长度上限调为 80 字符</td>
-                    <td><span class="diff-badge diff-mod">~1 命名 Prompt</span></td>
-                    <td>李工</td>
-                    <td>2026-03-25 09:40</td>
-                    <td>
-                      <div class="row-actions">
-                        <button class="btn-link" onclick="openVersionDetail('v1.1.4','naming')">查看</button>
-                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.4','naming')">对比</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <!-- v1.1.3: 仅命名 -->
-                  <tr data-module="naming">
-                    <td><span class="version-num">v1.1.3</span></td>
-                    <td><span class="mod-badge mod-naming">命名</span></td>
-                    <td>首次配置命名 Prompt 及格式规则，默认格式 [车型]_[核心标签]_[内容来源]_[日期]</td>
-                    <td><span class="diff-badge diff-add">+1 命名 Prompt</span></td>
-                    <td>王工</td>
-                    <td>2026-03-22 16:10</td>
-                    <td>
-                      <div class="row-actions">
-                        <button class="btn-link" onclick="openVersionDetail('v1.1.3','naming')">查看</button>
-                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.3','naming')">对比</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <!-- v1.1.2: 仅打标 -->
-                  <tr data-module="tagging">
-                    <td><span class="version-num">v1.1.2</span></td>
-                    <td><span class="mod-badge mod-tagging">打标</span></td>
-                    <td>修正「品牌历史」标签定义，补充 1937 年创始年份描述</td>
-                    <td><span class="diff-badge diff-mod">~1 标签定义</span></td>
-                    <td>李工</td>
-                    <td>2026-03-20 10:15</td>
-                    <td>
-                      <div class="row-actions">
-                        <button class="btn-link" onclick="openVersionDetail('v1.1.2','tagging')">查看</button>
-                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.2','tagging')">对比</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <!-- v1.1.1: 仅打标 Prompt -->
-                  <tr data-module="tagging">
-                    <td><span class="version-num">v1.1.1</span></td>
-                    <td><span class="mod-badge mod-tagging">打标</span></td>
-                    <td>打标 Prompt 调整，增加「禁止自行发明新标签」强调语</td>
-                    <td><span class="diff-badge diff-mod">~1 打标 Prompt</span></td>
-                    <td>王工</td>
-                    <td>2026-03-15 16:40</td>
-                    <td>
-                      <div class="row-actions">
-                        <button class="btn-link" onclick="openVersionDetail('v1.1.1','tagging')">查看</button>
-                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.1','tagging')">对比</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <!-- v1.1.0: 仅打标 Schema -->
-                  <tr data-module="tagging">
-                    <td><span class="version-num">v1.1.0</span></td>
-                    <td><span class="mod-badge mod-tagging">打标</span></td>
-                    <td>新增「对比内容」分类，增加 10 个竞品品牌标签</td>
-                    <td>
-                      <span class="diff-badge diff-add">+10 标签</span>
-                      <span class="diff-badge diff-add" style="margin-left:4px;">+1 分类</span>
-                    </td>
-                    <td>产品团队</td>
-                    <td>2026-03-08 09:20</td>
-                    <td>
-                      <div class="row-actions">
-                        <button class="btn-link" onclick="openVersionDetail('v1.1.0','tagging')">查看</button>
-                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.1.0','tagging')">对比</button>
-                      </div>
-                    </td>
-                  </tr>
-                  <!-- v1.0.0: 打标初始版 -->
-                  <tr data-module="tagging">
-                    <td><span class="version-num">v1.0.0</span></td>
-                    <td><span class="mod-badge mod-tagging">打标</span></td>
-                    <td>初始版本，配置打标 Prompt 及 7 个标签分类（50 个标签）</td>
-                    <td>
-                      <span class="diff-badge diff-add">+50 标签</span>
-                      <span class="diff-badge diff-add" style="margin-left:4px;">+7 分类</span>
-                    </td>
-                    <td>王工</td>
-                    <td>2026-02-20 11:00</td>
-                    <td>
-                      <div class="row-actions">
-                        <button class="btn-link" onclick="openVersionDetail('v1.0.0','tagging')">查看</button>
-                        <button class="btn-link" style="color:#667eea;" onclick="openCompareModal('v1.0.0','tagging')">对比</button>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <!-- Tab: History (已移除，操作记录见「操作记录」Tab) -->
+          <div id="tab-history" style="display:none!important;"><tbody id="historyBody"></tbody></div>
 
           <!-- Tab: Usage -->
           <div id="tab-usage" class="tab-content">
@@ -998,21 +842,13 @@
 <div class="modal-overlay" id="saveModal">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">保存为新版本</div>
+      <div class="modal-title">保存</div>
       <button class="modal-close" onclick="document.getElementById('saveModal').classList.remove('show')">×</button>
     </div>
     <div class="modal-body">
-      <div class="form-group">
-        <div class="form-label">版本号</div>
-        <input class="form-input" id="saveVersionInput" value="v1.2.1" placeholder="如 v1.2.1">
-      </div>
-      <div class="form-group">
-        <div class="form-label">变更说明 <span class="tip">（必填，便于历史追溯）</span></div>
-        <textarea class="form-input" id="saveVersionDesc" style="height:80px;resize:vertical;" placeholder="描述本次修改的内容，如：新增XX车型标签，优化XX分类定义..."></textarea>
-      </div>
-      <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:12px;font-size:12px;color:#92400e;display:flex;gap:8px;">
-        <span>⚠️</span>
-        <span>保存后，新版本将立即对该企业生效，请确认 Prompt 和 Schema 已测试无误。</span>
+      <div class="form-group" style="margin-bottom:0;">
+        <div class="form-label">备注说明 <span class="tip">（可选，将记录到操作记录中）</span></div>
+        <textarea class="form-input" id="saveVersionDesc" style="height:72px;resize:vertical;" placeholder="简述本次修改内容，如：新增XX车型标签、优化打标 Prompt…"></textarea>
       </div>
     </div>
     <div class="modal-footer">
@@ -1753,12 +1589,12 @@ function refreshUsage() {
 
 function saveVersion() {
   document.getElementById('saveModal').classList.remove('show');
-  const ver = document.getElementById('saveVersionInput').value.trim() || 'v1.2.1';
   const desc = document.getElementById('saveVersionDesc').value.trim();
-  showToast('✓ ' + ver + ' 已保存并生效');
+  document.getElementById('saveVersionDesc').value = '';
+  showToast('✓ 配置已保存并生效');
   document.querySelector('.dot-unsaved').classList.add('saved');
-  document.querySelector('.save-bar-hint').innerHTML = '<div class="dot-unsaved saved"></div> 已保存 · ' + ver;
-  addOpLog('Prompt', '保存版本 ' + ver + '【' + _saveModule + '】' + (desc ? '：' + desc : ''));
+  document.querySelector('.save-bar-hint').innerHTML = '<div class="dot-unsaved saved"></div> 已保存';
+  addOpLog('Prompt', '保存配置【' + _saveModule + '】' + (desc ? '：' + desc : ''));
 }
 
 function addCarModel() {
