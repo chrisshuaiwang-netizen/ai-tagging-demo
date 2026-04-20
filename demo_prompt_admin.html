@@ -866,14 +866,19 @@
 <div class="modal-overlay" id="defModal">
   <div class="modal" style="width:500px;">
     <div class="modal-header">
-      <div class="modal-title" id="defModalTitle">编辑说明</div>
+      <div class="modal-title">编辑标签</div>
       <button class="modal-close" onclick="document.getElementById('defModal').classList.remove('show')">×</button>
     </div>
     <div class="modal-body">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px 12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
-        <span style="font-size:12px;color:#6b7280;">标签</span>
-        <span style="font-size:14px;font-weight:600;color:#374151;" id="defModalTagName"></span>
-        <span style="font-size:11px;color:#9ca3af;margin-left:4px;" id="defModalCatName"></span>
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-size:13px;font-weight:500;color:#374151;">标签名称</span>
+          <span style="font-size:11px;color:#9ca3af;"><span id="defModalNameCount">0</span> / 50</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input id="defModalNameInput" class="form-input" maxlength="50" style="flex:1;" placeholder="标签名称">
+          <span style="font-size:11px;color:#9ca3af;white-space:nowrap;" id="defModalCatName"></span>
+        </div>
       </div>
       <div style="margin-bottom:8px;">
         <div style="font-size:13px;font-weight:500;color:#374151;margin-bottom:4px;">说明 / 识别要点 <span style="font-size:11px;color:#9ca3af;font-weight:400;">（可选，帮助模型更准确识别此标签）</span></div>
@@ -883,7 +888,7 @@
     <div class="modal-footer">
       <button class="btn btn-danger" id="defClearBtn" onclick="clearDef()" style="margin-right:auto;">清除说明</button>
       <button class="btn btn-secondary" onclick="document.getElementById('defModal').classList.remove('show')">取消</button>
-      <button class="btn btn-primary" onclick="saveDef()">保存说明</button>
+      <button class="btn btn-primary" onclick="saveDef()">保存</button>
     </div>
   </div>
 </div>
@@ -1557,29 +1562,50 @@ function openDefModal(btn) {
   _currentDefTag = tag;
   const name = tag.dataset.name;
   const def = tag.dataset.def || '';
-  const hasDef = tag.classList.contains('has-def');
   // Find category name from the closest category-head
   const catHead = tag.closest('.category-block').querySelector('.category-name');
   const catText = catHead ? catHead.childNodes[0].textContent.trim() : '';
 
-  document.getElementById('defModalTitle').textContent = hasDef ? '编辑说明 — ' + name : '添加说明 — ' + name;
-  document.getElementById('defModalTagName').textContent = name;
+  const nameInput = document.getElementById('defModalNameInput');
+  nameInput.value = name;
+  document.getElementById('defModalNameCount').textContent = name.length;
+  nameInput.oninput = () => document.getElementById('defModalNameCount').textContent = nameInput.value.length;
   document.getElementById('defModalCatName').textContent = catText ? '（' + catText + '）' : '';
   document.getElementById('defModalInput').value = def;
-  // Show/hide clear button
   document.getElementById('defClearBtn').style.display = def ? 'flex' : 'none';
   document.getElementById('defModal').classList.add('show');
-  setTimeout(() => document.getElementById('defModalInput').focus(), 100);
+  setTimeout(() => nameInput.focus(), 100);
 }
 
 function saveDef() {
-  const val = document.getElementById('defModalInput').value.trim();
   const tag = _currentDefTag;
   if (!tag) return;
+  const newName = document.getElementById('defModalNameInput').value.trim();
+  const val = document.getElementById('defModalInput').value.trim();
+
+  // Validate name
+  if (!newName) { showToast('标签名称不能为空'); return; }
+  if (newName.length > 50) { showToast('标签名称不能超过 50 字'); return; }
+  const oldName = tag.dataset.name;
+  if (newName !== oldName) {
+    const block = tag.closest('.category-block');
+    const dup = [...block.querySelectorAll('.schema-tag')].find(t => t !== tag && t.dataset.name === newName);
+    if (dup) { showToast('该分类下已存在同名标签'); return; }
+  }
+
+  // Save name
+  if (newName !== oldName) {
+    tag.dataset.name = newName;
+    tag.querySelector('.tag-name').textContent = newName;
+    // Update delTag inline onclick to use new name
+    const delBtn = tag.querySelector('.tag-del');
+    if (delBtn) delBtn.setAttribute('onclick', `delTag(this,'${newName.replace(/'/g, "\\'")}')`);
+  }
+
+  // Save definition
   tag.dataset.def = val;
   if (val) {
     tag.classList.add('has-def');
-    // Rebuild dot-wrap
     let dotWrap = tag.querySelector('.def-dot-wrap');
     if (!dotWrap) {
       dotWrap = document.createElement('span');
@@ -1587,7 +1613,6 @@ function saveDef() {
       tag.querySelector('.tag-name').after(dotWrap);
     }
     dotWrap.innerHTML = '<span class="def-dot"></span><span class="def-tip">' + escHtml(val) + '</span>';
-    // Update edit button text
     const editBtn = tag.querySelector('.tag-edit-def');
     if (editBtn) editBtn.textContent = '✎';
   } else {
@@ -1597,8 +1622,11 @@ function saveDef() {
     const editBtn = tag.querySelector('.tag-edit-def');
     if (editBtn) editBtn.textContent = '+ 说明';
   }
+
   document.getElementById('defModal').classList.remove('show');
-  showToast(val ? '✓ 说明已保存' : '说明已清除');
+  const nameChanged = newName !== oldName;
+  if (nameChanged) addOpLog('Schema', `重命名标签 [${oldName}] → [${newName}]${val ? '，并更新说明' : ''}`);
+  else showToast(val ? '✓ 已保存' : '说明已清除');
 }
 
 function clearDef() {
