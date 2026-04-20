@@ -2097,6 +2097,7 @@ const requiredTagRules = {
 };
 
 let _currentReqTag = '';
+let _currentReqTagCat = '';
 
 function initRequiredTagUI() {
   document.querySelectorAll('.schema-tag').forEach(tagEl => addReqBtnToTag(tagEl));
@@ -2144,6 +2145,7 @@ function getAdminSchemaOpts() {
 
 function openReqModal(tagEl) {
   _currentReqTag = tagEl.dataset.name;
+  _currentReqTagCat = (tagEl.closest('.category-block') || {}).dataset?.cat || '';
   document.getElementById('reqModalTagName').textContent = _currentReqTag;
   // Populate category select from current schema
   const opts = getAdminSchemaOpts();
@@ -2164,7 +2166,18 @@ function updateReqTagSelect() {
   const cat = document.getElementById('reqCatSelect').value;
   const opts = getAdminSchemaOpts();
   const tags = opts[cat] || [];
-  document.getElementById('reqTagSelect').innerHTML = tags.map(t => `<option value="${escHtml(t)}">${escHtml(t)}</option>`).join('');
+  const existingInCat = (requiredTagRules[_currentReqTag] || []).filter(r => r.cat === cat).map(r => r.tag);
+  const sel = document.getElementById('reqTagSelect');
+  sel.innerHTML = tags.map(t => {
+    const isSelf = cat === _currentReqTagCat && t === _currentReqTag;
+    const isAlready = existingInCat.includes(t);
+    const disabled = isSelf || isAlready;
+    const label = isSelf ? `${t}（当前标签）` : isAlready ? `${t}（已选）` : t;
+    return `<option value="${escHtml(t)}" ${disabled ? 'disabled style="color:#d1d5db;"' : ''}>${escHtml(label)}</option>`;
+  }).join('');
+  // Auto-advance to first enabled option
+  const first = sel.querySelector('option:not([disabled])');
+  if (first) sel.value = first.value;
 }
 
 function renderReqRulesList() {
@@ -2172,6 +2185,7 @@ function renderReqRulesList() {
   const list = document.getElementById('reqRulesList');
   if (rules.length === 0) {
     list.innerHTML = '<div style="text-align:center;padding:14px 0;color:#9ca3af;font-size:13px;border:1px dashed #e5e7eb;border-radius:7px;">暂无关联必打标签规则</div>';
+    updateReqTagSelect();
     return;
   }
   list.innerHTML = rules.map((r, idx) => `
@@ -2185,6 +2199,7 @@ function renderReqRulesList() {
       <span onclick="removeReqRule(${idx})" style="color:#dc2626;cursor:pointer;font-size:15px;padding:2px 5px;opacity:0.5;transition:opacity 0.15s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">×</span>
     </div>
   `).join('');
+  updateReqTagSelect();
 }
 
 function addReqRule() {
@@ -2192,6 +2207,9 @@ function addReqRule() {
   const tag = document.getElementById('reqTagSelect').value;
   if (!cat || !tag) { showToast('请选择分类和标签'); return; }
   if (!requiredTagRules[_currentReqTag]) requiredTagRules[_currentReqTag] = [];
+  if (requiredTagRules[_currentReqTag].length >= 20) {
+    showToast('最多关联 20 个标签'); return;
+  }
   if (requiredTagRules[_currentReqTag].find(r => r.cat === cat && r.tag === tag)) {
     showToast('该规则已存在'); return;
   }
