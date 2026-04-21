@@ -203,6 +203,12 @@
   .oplog-prompt { background: #dbeafe; color: #2563eb; }
   .oplog-export { background: #d1fae5; color: #059669; }
   .oplog-detail { font-size: 12px; color: #374151; max-width: 340px; }
+  .import-drop-zone { border: 2px dashed #d1d5db; border-radius: 8px; padding: 20px 16px; text-align: center; cursor: pointer; transition: all 0.15s; background: #fafafa; }
+  .import-drop-zone:hover, .import-drop-zone.drag-over { border-color: #667eea; background: #f0f0ff; }
+  .import-drop-zone .dz-icon { font-size: 28px; margin-bottom: 8px; }
+  .import-drop-zone .dz-text { font-size: 13px; color: #374151; }
+  .import-drop-zone .dz-sub { font-size: 12px; color: #9ca3af; margin-top: 4px; }
+  .import-drop-zone .dz-filename { font-size: 12px; color: #667eea; font-weight: 500; margin-top: 6px; display:none; }
 
   /* History tab */
   .history-table { width: 100%; border-collapse: collapse; }
@@ -971,7 +977,7 @@
   <div class="modal" style="width:560px;">
     <div class="modal-header">
       <div class="modal-title">⬆ 导入 Schema JSON</div>
-      <button class="modal-close" onclick="document.getElementById('importModal').classList.remove('show')">×</button>
+      <button class="modal-close" onclick="closeImportModal()">×</button>
     </div>
     <div class="modal-body">
       <div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:16px;display:flex;gap:8px;">
@@ -1003,14 +1009,28 @@
   ]
 }</pre>
       </div>
+      <div class="form-group">
+        <div class="form-label" style="margin-bottom:8px;">上传 JSON 文件</div>
+        <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="handleImportFile(this.files[0])">
+        <div class="import-drop-zone" id="importDropZone"
+          onclick="document.getElementById('importFileInput').click()"
+          ondragover="event.preventDefault();this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="event.preventDefault();this.classList.remove('drag-over');handleImportFile(event.dataTransfer.files[0])">
+          <div class="dz-icon">📂</div>
+          <div class="dz-text">点击选择文件，或拖拽 JSON 文件至此</div>
+          <div class="dz-sub">仅支持 .json 格式</div>
+          <div class="dz-filename" id="importFileName"></div>
+        </div>
+      </div>
       <div class="form-group" style="margin-bottom:0;">
-        <div class="form-label">粘贴 JSON 内容</div>
-        <textarea class="prompt-editor" id="importJsonInput" style="min-height:120px;font-family:'Menlo','Monaco','Consolas',monospace;font-size:12px;" placeholder='{"categories": [...]}' oninput="validateImportJson()"></textarea>
+        <div class="form-label">或粘贴 JSON 内容</div>
+        <textarea class="prompt-editor" id="importJsonInput" style="min-height:100px;font-family:'Menlo','Monaco','Consolas',monospace;font-size:12px;" placeholder='{"categories": [...]}' oninput="validateImportJson()"></textarea>
         <div id="importJsonError" style="font-size:12px;color:#dc2626;margin-top:4px;display:none;"></div>
       </div>
     </div>
     <div class="modal-footer">
-      <button class="btn btn-secondary" onclick="document.getElementById('importModal').classList.remove('show')">取消</button>
+      <button class="btn btn-secondary" onclick="closeImportModal()">取消</button>
       <button class="btn btn-primary" id="importConfirmBtn" onclick="importSchema()">确认导入</button>
     </div>
   </div>
@@ -1880,9 +1900,23 @@ function validateImportJson() {
   }
 }
 
+function handleImportFile(file) {
+  if (!file) return;
+  if (!file.name.toLowerCase().endsWith('.json')) { showToast('请选择 .json 格式文件'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('importJsonInput').value = e.target.result;
+    const nameEl = document.getElementById('importFileName');
+    nameEl.textContent = '📄 ' + file.name;
+    nameEl.style.display = 'block';
+    validateImportJson();
+  };
+  reader.readAsText(file);
+}
+
 function importSchema() {
   const raw = document.getElementById('importJsonInput').value.trim();
-  if (!raw) { showToast('请先粘贴 JSON 内容'); return; }
+  if (!raw) { showToast('请上传 JSON 文件或粘贴 JSON 内容'); return; }
   let data;
   try { data = JSON.parse(raw); } catch(e) { showToast('JSON 解析失败'); return; }
 
@@ -1938,8 +1972,7 @@ function importSchema() {
     });
   });
 
-  document.getElementById('importJsonInput').value = '';
-  document.getElementById('importModal').classList.remove('show');
+  closeImportModal();
   let msg = `✓ 导入完成：新增 ${addedCats} 个分类，${addedTags} 个标签`;
   if (skippedCats > 0) msg += `；已过滤 ${skippedCats} 个重复分类`;
   if (skippedTags > 0) msg += `，${skippedTags} 个重复标签`;
@@ -1958,11 +1991,24 @@ function filterHistory(type, btn) {
 }
 
 // Close modals on overlay click
-['addTagModal','addCatModal','importModal'].forEach(id => {
+['addTagModal','addCatModal'].forEach(id => {
   document.getElementById(id).addEventListener('click', function(e) {
     if (e.target === this) this.classList.remove('show');
   });
 });
+document.getElementById('importModal').addEventListener('click', function(e) {
+  if (e.target === this) closeImportModal();
+});
+
+function closeImportModal() {
+  document.getElementById('importModal').classList.remove('show');
+  document.getElementById('importJsonInput').value = '';
+  document.getElementById('importJsonError').style.display = 'none';
+  const nameEl = document.getElementById('importFileName');
+  nameEl.textContent = '';
+  nameEl.style.display = 'none';
+  document.getElementById('importFileInput').value = '';
+}
 
 // ─── Select Tenant Modal ───
 const AVAILABLE_TENANTS = [
