@@ -779,7 +779,6 @@
                 <thead>
                   <tr>
                     <th style="width:160px;">时间</th>
-                    <th style="width:72px;">类型</th>
                     <th>操作详情</th>
                     <th style="width:80px;">操作人</th>
                   </tr>
@@ -1140,14 +1139,12 @@ function renderOpLog() {
   if (!body) return;
   if (countEl) countEl.textContent = opLog.length;
   if (opLog.length === 0) {
-    body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#9ca3af;padding:40px 0;font-size:13px;">暂无操作记录，请在其他标签页进行 Prompt 或 Schema 操作</td></tr>';
+    body.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#9ca3af;padding:40px 0;font-size:13px;">暂无操作记录，请在其他标签页进行 Prompt 或 Schema 操作</td></tr>';
     return;
   }
-  const typeCls = { 'Schema': 'oplog-schema', 'Prompt': 'oplog-prompt', '导出': 'oplog-export' };
   body.innerHTML = opLog.map(r => `
     <tr>
       <td style="white-space:nowrap;color:#6b7280;font-size:12px;">${r.ts}</td>
-      <td><span class="oplog-badge ${typeCls[r.type] || 'oplog-schema'}">${r.type}</span></td>
       <td class="oplog-detail">${escHtml(r.detail)}</td>
       <td style="font-size:13px;">${r.user}</td>
     </tr>
