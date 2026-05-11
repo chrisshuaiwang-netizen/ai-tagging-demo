@@ -116,6 +116,19 @@
   .cat-del-btn { font-size: 11px; color: #9ca3af; cursor: pointer; padding: 2px 7px; border-radius: 4px; border: 1px solid #e5e7eb; background: #fff; transition: all 0.15s; white-space: nowrap; }
   .cat-del-btn:hover { color: #dc2626; border-color: #fca5a5; background: #fff5f5; }
 
+  /* Re-recognize button */
+  .rerecog-btn { font-size: 11px; color: #667eea; cursor: pointer; padding: 2px 8px; border-radius: 4px; border: 1px solid #c7d2fe; background: #eef2ff; transition: all 0.15s; white-space: nowrap; display: inline-flex; align-items: center; gap: 3px; }
+  .rerecog-btn:hover { background: #e0e7ff; border-color: #a5b4fc; }
+  .rerecog-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .rerecog-btn .spin { display: inline-block; animation: spin 0.8s linear infinite; }
+  .cat-loading { padding: 12px 0; display: flex; align-items: center; gap: 8px; color: #9ca3af; font-size: 12px; }
+  .cat-loading .dot { width: 5px; height: 5px; border-radius: 50%; background: #667eea; animation: blink 1s infinite; }
+  .cat-loading .dot:nth-child(2) { animation-delay: 0.2s; }
+  .cat-loading .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,100%{opacity:0.3;} 50%{opacity:1;} }
+  .tag-refreshed { animation: tagIn 0.25s ease; }
+  @keyframes tagIn { from{opacity:0;transform:translateY(4px);} to{opacity:1;transform:none;} }
+
   /* Add tag inline */
   .add-tag-inline { display: inline-flex; align-items: center; gap: 4px; padding: 5px 8px; border: 1px dashed #d1d5db; border-radius: 6px; font-size: 12px; color: #9ca3af; cursor: pointer; transition: all 0.15s; }
   .add-tag-inline:hover { border-color: #667eea; color: #667eea; background: #f0f0ff; }
@@ -320,6 +333,7 @@
           <div class="ai-header-top">
             <div class="ai-title">AI 标签</div>
             <div id="aiHeaderBtns" style="display:flex;align-items:center;gap:6px;">
+              <button class="rerecog-btn" id="globalRerecogBtn" onclick="rerecognizeAll(this)">↺ 重新识别</button>
               <button class="ai-action-btn" onclick="openAddTagModal('')">+ 添加分类</button>
             </div>
           </div>
@@ -766,6 +780,48 @@ function addTagToSection(tag, cat) {
 
 function closeModal(id) {
   document.getElementById(id).classList.remove('show');
+}
+
+// ─── Re-recognize Category ───
+const rerecogResults = {
+  '车型':     ['全新探岳L', '探岳X'],
+  '商品亮点': ['外观', '动力', '配置', '智驾'],
+  '内容来源': ['官方发布'],
+  '种草内容': ['旅游', '生活', '驾乘感受'],
+  '品牌':     ['品牌工艺', '品牌文化'],
+};
+
+function rerecognizeAll(btn) {
+  const sections = document.querySelectorAll('#aiCatSections .cat-section');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">↺</span> 识别中…';
+
+  sections.forEach(section => {
+    const wrap = section.querySelector('.tags-wrap');
+    wrap.innerHTML = `<div class="cat-loading">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+      <span>AI 重新识别中…</span>
+    </div>`;
+  });
+
+  setTimeout(() => {
+    sections.forEach(section => {
+      const catTitle = section.querySelector('.cat-title').textContent.trim();
+      const wrap = section.querySelector('.tags-wrap');
+      const newTags = rerecogResults[catTitle] || schemaOpts[catTitle]?.slice(0, 2) || [];
+      wrap.innerHTML = newTags.map(v =>
+        `<div class="ai-tag tag-ai tag-refreshed">
+          <span class="tag-text">${v}</span>
+          <span class="tag-actions"><span class="tag-del" onclick="deleteTag(this,'${v}')">×</span></span>
+        </div>`
+      ).join('') + `<div class="add-tag-inline" onclick="openAddTagModal('${catTitle}')">+ 添加标签</div>`;
+    });
+
+    btn.disabled = false;
+    btn.innerHTML = '↺ 重新识别';
+    showToast('✓ 所有分类已重新识别，标签已更新');
+  }, 1800);
 }
 
 // ─── AI Status ───
