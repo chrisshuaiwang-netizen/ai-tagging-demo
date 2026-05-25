@@ -1920,64 +1920,111 @@ function importSchema() {
   let data;
   try { data = JSON.parse(raw); } catch(e) { showToast('JSON 解析失败'); return; }
 
-  let addedCats = 0, addedTags = 0, skippedCats = 0, skippedTags = 0;
+  let addedCats = 0, addedTags = 0, updatedTags = 0, removedTags = 0;
   const container = document.getElementById('schemaCategories');
   const expandTip = container.querySelector('div[onclick*="展开更多分类"]');
 
   (data.categories || []).forEach(cat => {
     if (!cat.category) return;
-    // Skip if category already exists
-    if (container.querySelector(`.category-block[data-cat="${CSS.escape(cat.category)}"]`)) {
-      skippedCats++;
-      skippedTags += (cat.tags || []).length;
-      return;
-    }
-    const block = document.createElement('div');
-    block.className = 'category-block';
-    block.dataset.cat = cat.category;
-    block.innerHTML = `
-      <div class="category-head">
-        <div class="category-name">${escHtml(cat.category)} <span class="badge badge-gray">0 个标签</span></div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
-          <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
-        </div>
-      </div>
-      <div class="category-tags"></div>
-    `;
-    expandTip ? container.insertBefore(block, expandTip) : container.appendChild(block);
-    const catCount = document.getElementById('catCount');
-    if (catCount) catCount.textContent = String(parseInt(catCount.textContent || '8') + 1);
-    addedCats++;
+    const newTagMap = {};
+    (cat.tags || []).forEach(t => { if (t.value) newTagMap[t.value] = t.definition || ''; });
 
-    const tagsContainer = block.querySelector('.category-tags');
-    const seen = new Set();
-    (cat.tags || []).forEach(t => {
-      if (!t.value) return;
-      if (seen.has(t.value)) { skippedTags++; return; }
-      seen.add(t.value);
-      const chip = document.createElement('div');
-      const def = t.definition || '';
-      chip.className = 'schema-tag' + (def ? ' has-def' : '');
-      chip.dataset.name = t.value;
-      chip.dataset.def = def;
-      const dotHtml = def ? `<span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">${escHtml(def)}</span></span>` : '';
-      const editLabel = def ? '✎' : '+ 说明';
-      chip.innerHTML = `<span class="tag-name">${escHtml(t.value)}</span>${dotHtml}<span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">${editLabel}</span><span class="tag-del" onclick="delTag(this,'${escHtml(t.value)}')">×</span></span>`;
-      tagsContainer.appendChild(chip);
-      addReqBtnToTag(chip);
+    const existingBlock = container.querySelector(`.category-block[data-cat="${CSS.escape(cat.category)}"]`);
+
+    if (existingBlock) {
+      // Sync existing category: remove tags not in new JSON, update/add the rest
+      const tagsContainer = existingBlock.querySelector('.category-tags');
+
+      // Remove tags that are no longer in the new JSON
+      [...tagsContainer.querySelectorAll('.schema-tag')].forEach(chip => {
+        if (!(chip.dataset.name in newTagMap)) {
+          chip.remove();
+          removedTags++;
+        }
+      });
+
+      // Update existing tags and add new ones
+      Object.entries(newTagMap).forEach(([val, def]) => {
+        const existing = tagsContainer.querySelector(`.schema-tag[data-name="${CSS.escape(val)}"]`);
+        if (existing) {
+          // Update definition if JSON provides one
+          if (def) {
+            existing.dataset.def = def;
+            existing.classList.add('has-def');
+            let dotWrap = existing.querySelector('.def-dot-wrap');
+            if (!dotWrap) {
+              dotWrap = document.createElement('span');
+              dotWrap.className = 'def-dot-wrap';
+              existing.querySelector('.tag-name').after(dotWrap);
+            }
+            dotWrap.innerHTML = `<span class="def-dot"></span><span class="def-tip">${escHtml(def)}</span>`;
+            const editBtn = existing.querySelector('.tag-edit-def');
+            if (editBtn) editBtn.textContent = '✎';
+            updatedTags++;
+          }
+        } else {
+          // Add new tag
+          const chip = document.createElement('div');
+          chip.className = 'schema-tag' + (def ? ' has-def' : '');
+          chip.dataset.name = val;
+          chip.dataset.def = def;
+          const dotHtml = def ? `<span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">${escHtml(def)}</span></span>` : '';
+          chip.innerHTML = `<span class="tag-name">${escHtml(val)}</span>${dotHtml}<span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">${def ? '✎' : '+ 说明'}</span><span class="tag-del" onclick="delTag(this,'${escHtml(val)}')">×</span></span>`;
+          tagsContainer.appendChild(chip);
+          addReqBtnToTag(chip);
+          addedTags++;
+        }
+      });
+
+      // Refresh badge count
+      const badge = existingBlock.querySelector('.category-name .badge');
+      if (badge) badge.textContent = tagsContainer.querySelectorAll('.schema-tag').length + ' 个标签';
+
+    } else {
+      // Add new category
+      const block = document.createElement('div');
+      block.className = 'category-block';
+      block.dataset.cat = cat.category;
+      block.innerHTML = `
+        <div class="category-head">
+          <div class="category-name">${escHtml(cat.category)} <span class="badge badge-gray">0 个标签</span></div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>
+            <button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>
+          </div>
+        </div>
+        <div class="category-tags"></div>
+      `;
+      expandTip ? container.insertBefore(block, expandTip) : container.appendChild(block);
+      const catCount = document.getElementById('catCount');
+      if (catCount) catCount.textContent = String(parseInt(catCount.textContent || '0') + 1);
+      addedCats++;
+
+      const tagsContainer = block.querySelector('.category-tags');
+      Object.entries(newTagMap).forEach(([val, def]) => {
+        const chip = document.createElement('div');
+        chip.className = 'schema-tag' + (def ? ' has-def' : '');
+        chip.dataset.name = val;
+        chip.dataset.def = def;
+        const dotHtml = def ? `<span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">${escHtml(def)}</span></span>` : '';
+        chip.innerHTML = `<span class="tag-name">${escHtml(val)}</span>${dotHtml}<span class="tag-acts"><span class="tag-edit-def" onclick="openDefModal(this)">${def ? '✎' : '+ 说明'}</span><span class="tag-del" onclick="delTag(this,'${escHtml(val)}')">×</span></span>`;
+        tagsContainer.appendChild(chip);
+        addReqBtnToTag(chip);
+        addedTags++;
+      });
       const badge = block.querySelector('.category-name .badge');
-      if (badge) badge.textContent = (parseInt(badge.textContent) + 1) + ' 个标签';
-      addedTags++;
-    });
+      if (badge) badge.textContent = tagsContainer.querySelectorAll('.schema-tag').length + ' 个标签';
+    }
   });
 
   closeImportModal();
-  let msg = `✓ 导入完成：新增 ${addedCats} 个分类，${addedTags} 个标签`;
-  if (skippedCats > 0) msg += `；已过滤 ${skippedCats} 个重复分类`;
-  if (skippedTags > 0) msg += `，${skippedTags} 个重复标签`;
-  showToast(msg);
-  addOpLog('Schema', `JSON 导入：新增 ${addedCats} 个分类、${addedTags} 个标签` + (skippedCats || skippedTags ? `（过滤 ${skippedCats} 分类 / ${skippedTags} 标签）` : ''));
+  const parts = [];
+  if (addedCats) parts.push(`新增 ${addedCats} 个分类`);
+  if (addedTags) parts.push(`新增 ${addedTags} 个标签`);
+  if (updatedTags) parts.push(`更新 ${updatedTags} 个说明`);
+  if (removedTags) parts.push(`移除 ${removedTags} 个旧标签`);
+  showToast('✓ 导入完成：' + (parts.join('、') || '无变化'));
+  addOpLog('Schema', `JSON 覆盖导入：${parts.join('、') || '无变化'}`);
 }
 
 // --- History Filter ---
