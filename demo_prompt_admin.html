@@ -890,15 +890,9 @@
         </div>
       </div>
       <div style="margin-bottom:8px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-          <div style="font-size:13px;font-weight:500;color:#374151;">说明 / 识别要点 <span style="font-size:11px;color:#9ca3af;font-weight:400;">（可选）</span></div>
-          <div style="display:flex;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
-            <button id="defTabEdit" class="def-tab active" onclick="switchDefTab('edit')">编辑</button>
-            <button id="defTabPreview" class="def-tab" onclick="switchDefTab('preview')">预览</button>
-          </div>
-        </div>
-        <textarea id="defModalInput" oninput="onDefInput()" style="width:100%;min-height:180px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;color:#1a1a2e;font-family:inherit;line-height:1.6;resize:vertical;outline:none;transition:border-color 0.15s;box-sizing:border-box;" placeholder="描述 AI 识别此标签的特征，例如&#10;· 外观特点（贯穿式尾灯、流线型车身…）&#10;· 触发场景（车展全景、官方海报…）&#10;【触发要素】① 文本中出现关键词 ② 画面中出现…&#10;【区分标准】…&#10;【不打情况】…"></textarea>
-        <div id="defModalPreview" class="def-preview" style="display:none;"></div>
+        <div style="font-size:13px;font-weight:500;color:#374151;margin-bottom:6px;">说明 / 识别要点 <span style="font-size:11px;color:#9ca3af;font-weight:400;">（来自标签库）</span></div>
+        <textarea id="defModalInput" style="display:none;"></textarea>
+        <div id="defModalPreview" class="def-preview"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1633,8 +1627,8 @@ function openDefModal(btn) {
   nameInput.oninput = () => document.getElementById('defModalNameCount').textContent = nameInput.value.length;
   document.getElementById('defModalCatName').textContent = catText ? '（' + catText + '）' : '';
   document.getElementById('defModalInput').value = def;
+  document.getElementById('defModalPreview').innerHTML = renderDefHtml(def);
   document.getElementById('defClearBtn').style.display = def ? 'flex' : 'none';
-  switchDefTab('edit');
   document.getElementById('defModal').classList.add('show');
   setTimeout(() => nameInput.focus(), 100);
 }
