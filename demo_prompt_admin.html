@@ -174,6 +174,10 @@
   .def-tip { display: none; position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; font-size: 11px; padding: 7px 10px; border-radius: 6px; white-space: pre-wrap; max-width: 380px; min-width: 140px; max-height: 320px; overflow-y: auto; z-index: 200; line-height: 1.6; pointer-events: none; word-break: break-all; }
   .def-tip::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 4px solid transparent; border-top-color: #1a1a2e; }
   .def-dot-wrap:hover .def-tip { display: block; }
+  .def-tab { font-size:11px; padding:3px 10px; background:#fff; border:none; cursor:pointer; color:#6b7280; transition:all 0.12s; line-height:1.8; }
+  .def-tab.active { background:#5a2df4; color:#fff; }
+  .def-preview { background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:10px 14px; font-size:12px; color:#374151; line-height:1.8; min-height:160px; max-height:300px; overflow-y:auto; }
+  .def-section-tag { color:#5a2df4; font-weight:700; }
   /* 操作按钮区，hover 才显示 */
   .tag-acts { display: none; align-items: center; gap: 2px; margin-left: 2px; }
   .schema-tag:hover .tag-acts { display: inline-flex; }
@@ -886,8 +890,15 @@
         </div>
       </div>
       <div style="margin-bottom:8px;">
-        <div style="font-size:13px;font-weight:500;color:#374151;margin-bottom:4px;">说明 / 识别要点 <span style="font-size:11px;color:#9ca3af;font-weight:400;">（可选，帮助模型更准确识别此标签）</span></div>
-        <textarea id="defModalInput" style="width:100%;min-height:110px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;color:#1a1a2e;font-family:inherit;line-height:1.6;resize:vertical;outline:none;transition:border-color 0.15s;" placeholder="描述 AI 识别此标签的特征，例如&#10;· 外观特点（贯穿式尾灯、流线型车身…）&#10;· 触发场景（车展全景、官方海报…）&#10;· 关键词（包含"B9"字样、出现品牌Logo…）"></textarea>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <div style="font-size:13px;font-weight:500;color:#374151;">说明 / 识别要点 <span style="font-size:11px;color:#9ca3af;font-weight:400;">（可选）</span></div>
+          <div style="display:flex;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;">
+            <button id="defTabEdit" class="def-tab active" onclick="switchDefTab('edit')">编辑</button>
+            <button id="defTabPreview" class="def-tab" onclick="switchDefTab('preview')">预览</button>
+          </div>
+        </div>
+        <textarea id="defModalInput" oninput="onDefInput()" style="width:100%;min-height:180px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;font-size:13px;color:#1a1a2e;font-family:inherit;line-height:1.6;resize:vertical;outline:none;transition:border-color 0.15s;box-sizing:border-box;" placeholder="描述 AI 识别此标签的特征，例如&#10;· 外观特点（贯穿式尾灯、流线型车身…）&#10;· 触发场景（车展全景、官方海报…）&#10;【触发要素】① 文本中出现关键词 ② 画面中出现…&#10;【区分标准】…&#10;【不打情况】…"></textarea>
+        <div id="defModalPreview" class="def-preview" style="display:none;"></div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1574,6 +1585,39 @@ function addCarModel() {
 // --- Tag Definition ---
 let _currentDefTag = null;
 
+function switchDefTab(tab) {
+  const textarea = document.getElementById('defModalInput');
+  const preview  = document.getElementById('defModalPreview');
+  const editBtn  = document.getElementById('defTabEdit');
+  const preBtn   = document.getElementById('defTabPreview');
+  if (tab === 'preview') {
+    textarea.style.display = 'none';
+    preview.style.display  = 'block';
+    preview.innerHTML = renderDefHtml(textarea.value);
+    editBtn.classList.remove('active');
+    preBtn.classList.add('active');
+  } else {
+    textarea.style.display = '';
+    preview.style.display  = 'none';
+    editBtn.classList.add('active');
+    preBtn.classList.remove('active');
+  }
+}
+
+function renderDefHtml(text) {
+  if (!text.trim()) return '<span style="color:#9ca3af;font-size:12px;">暂无说明</span>';
+  return escHtml(text)
+    .replace(/\n/g, '<br>')
+    .replace(/【([^】]+)】/g, '<span class="def-section-tag">【$1】</span>');
+}
+
+function onDefInput() {
+  const preview = document.getElementById('defModalPreview');
+  if (preview.style.display !== 'none') {
+    preview.innerHTML = renderDefHtml(document.getElementById('defModalInput').value);
+  }
+}
+
 function openDefModal(btn) {
   const tag = btn.closest('.schema-tag');
   _currentDefTag = tag;
@@ -1590,6 +1634,7 @@ function openDefModal(btn) {
   document.getElementById('defModalCatName').textContent = catText ? '（' + catText + '）' : '';
   document.getElementById('defModalInput').value = def;
   document.getElementById('defClearBtn').style.display = def ? 'flex' : 'none';
+  switchDefTab('edit');
   document.getElementById('defModal').classList.add('show');
   setTimeout(() => nameInput.focus(), 100);
 }
