@@ -2064,6 +2064,7 @@ function importSchema() {
   if (removedTags) parts.push(`移除 ${removedTags} 个旧标签`);
   showToast('✓ 导入完成：' + (parts.join('、') || '无变化'));
   addOpLog('Schema', `JSON 覆盖导入：${parts.join('、') || '无变化'}`);
+  persistSave();
 }
 
 // --- History Filter ---
@@ -2358,7 +2359,119 @@ function removeReqRule(idx) {
 // Init required tag UI after DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   initRequiredTagUI();
+  persistLoad();
+
+  // 自动保存：prompt 编辑框 input 时实时存
+  document.getElementById('promptEditor')?.addEventListener('input', persistSave);
+  document.getElementById('namingPromptEditor')?.addEventListener('input', persistSave);
+  document.getElementById('namingRulesEditor')?.addEventListener('input', persistSave);
 });
+
+// ─── localStorage 持久化 ──────────────────────────────────────────────────────
+const _PERSIST_KEY = 'prompt_admin_state_v2';
+
+function persistSave() {
+  // 完整序列化 schema：分类顺序 + 每个标签及其说明
+  const categories = [];
+  document.querySelectorAll('.category-block[data-cat]').forEach(block => {
+    const cat = block.dataset.cat;
+    const tags = [...block.querySelectorAll('.schema-tag[data-name]')].map(t => ({
+      name: t.dataset.name,
+      def:  t.dataset.def || ''
+    }));
+    categories.push({ cat, tags });
+  });
+
+  const state = {
+    taggingPrompt: document.getElementById('promptEditor')?.value       || '',
+    namingPrompt:  document.getElementById('namingPromptEditor')?.value || '',
+    namingRules:   document.getElementById('namingRulesEditor')?.value  || '',
+    categories,
+  };
+  localStorage.setItem(_PERSIST_KEY, JSON.stringify(state));
+}
+
+function persistLoad() {
+  const raw = localStorage.getItem(_PERSIST_KEY);
+  if (!raw) return;
+  let state;
+  try { state = JSON.parse(raw); } catch { return; }
+
+  // 恢复 prompt
+  if (state.taggingPrompt) {
+    const el = document.getElementById('promptEditor');
+    if (el) el.value = state.taggingPrompt;
+  }
+  if (state.namingPrompt) {
+    const el = document.getElementById('namingPromptEditor');
+    if (el) el.value = state.namingPrompt;
+  }
+  if (state.namingRules) {
+    const el = document.getElementById('namingRulesEditor');
+    if (el) el.value = state.namingRules;
+  }
+
+  // 完整重建 schema DOM（覆盖硬编码 HTML）
+  if (state.categories && state.categories.length > 0) {
+    const container = document.getElementById('schemaCategories');
+    const expandTip  = container.querySelector('div[onclick*="展开更多分类"]');
+
+    // 清空现有分类块
+    container.querySelectorAll('.category-block').forEach(b => b.remove());
+
+    state.categories.forEach(({ cat, tags }) => {
+      const block = document.createElement('div');
+      block.className   = 'category-block';
+      block.dataset.cat = cat;
+
+      const tagsHtml = tags.map(({ name, def }) => {
+        const eName = escHtml(name);
+        const eDef  = escHtml(def);
+        const dotHtml   = def ? `<span class="def-dot-wrap"><span class="def-dot"></span><span class="def-tip">${eDef}</span></span>` : '';
+        const editLabel = def ? '✎' : '+ 说明';
+        return `<div class="schema-tag${def ? ' has-def' : ''}" data-name="${eName}" data-def="${eDef}">` +
+          `<span class="tag-name">${eName}</span>${dotHtml}` +
+          `<span class="tag-acts">` +
+          `<span class="tag-edit-def" onclick="openDefModal(this)">${editLabel}</span>` +
+          `<span class="tag-del" onclick="delTag(this,'${eName}')">×</span>` +
+          `</span></div>`;
+      }).join('');
+
+      block.innerHTML =
+        `<div class="category-head">` +
+          `<div class="category-name">${escHtml(cat)} <span class="badge badge-gray">${tags.length} 个标签</span></div>` +
+          `<div style="display:flex;gap:6px;">` +
+            `<button class="btn-xs" onclick="openAddTagModal(this.closest('.category-block'))">+ 添加标签</button>` +
+            `<button class="btn-xs-del" onclick="openDeleteCatConfirm(this.closest('.category-block'))">删除分类</button>` +
+          `</div>` +
+        `</div>` +
+        `<div class="category-tags">${tagsHtml}</div>`;
+
+      if (expandTip) container.insertBefore(block, expandTip);
+      else           container.appendChild(block);
+    });
+
+    // 更新分类总数
+    const catCount = document.getElementById('catCount');
+    if (catCount) catCount.textContent = state.categories.length;
+
+    // 重新挂载关联必打标签 UI
+    initRequiredTagUI();
+  }
+}
+
+// 钩入现有函数，保存后自动持久化
+const _origSaveDef = saveDef;
+saveDef = function(...args) { _origSaveDef.apply(this, args); persistSave(); };
+
+const _origDelTag = delTag;
+delTag = function(...args) { _origDelTag.apply(this, args); persistSave(); };
+
+const _origSaveVersion = saveVersion;
+saveVersion = function(...args) { _origSaveVersion.apply(this, args); persistSave(); };
+
+const _origAddTag = addTag;
+addTag = function(...args) { _origAddTag.apply(this, args); persistSave(); };
 </script>
 </body>
 </html>
